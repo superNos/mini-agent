@@ -27,6 +27,10 @@ async function assertMissing(pathToCheck: string) {
   throw new Error("Output directory already exists");
 }
 
+function dedupeToolIds(selectedTools: ToolId[]) {
+  return [...new Set(selectedTools)];
+}
+
 async function copySelectedTools(builderRoot: string, projectPath: string, selectedTools: ToolId[]) {
   const targetToolsDir = path.join(projectPath, "src", "tools");
   await mkdir(targetToolsDir, { recursive: true });
@@ -55,18 +59,19 @@ async function copyAgentCore(builderRoot: string, projectPath: string) {
 
 export async function createProject(input: CreateProjectInput): Promise<CreateProjectResult> {
   const parsed = createProjectRequestSchema.parse(input.request);
+  const request = { ...parsed, selectedTools: dedupeToolIds(parsed.selectedTools) };
   const workspaceRoot = input.workspaceRoot ?? getWorkspaceRoot();
   const builderRoot = input.builderRoot ?? getBuilderRoot();
-  const { generatedRoot, projectPath } = validateProjectOutputPath(workspaceRoot, parsed.projectSlug);
+  const { generatedRoot, projectPath } = validateProjectOutputPath(workspaceRoot, request.projectSlug);
   const templateRoot = path.join(builderRoot, "src", "templates", "agent-project");
 
   await assertMissing(projectPath);
   await mkdir(generatedRoot, { recursive: true });
   await cp(templateRoot, projectPath, { recursive: true });
   await copyAgentCore(builderRoot, projectPath);
-  await copySelectedTools(builderRoot, projectPath, parsed.selectedTools);
+  await copySelectedTools(builderRoot, projectPath, request.selectedTools);
   await mkdir(path.join(projectPath, "src", "skills"), { recursive: true });
-  await writeFile(path.join(projectPath, "src", "agent", "config.ts"), renderAgentConfig(parsed));
+  await writeFile(path.join(projectPath, "src", "agent", "config.ts"), renderAgentConfig(request));
 
   return {
     projectPath,
