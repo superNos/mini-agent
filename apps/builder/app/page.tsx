@@ -223,6 +223,7 @@ export default function BuilderPage() {
   async function createProject() {
     setIsCreating(true);
     setCreateError("");
+    setCreateResult(null);
     try {
       const { apiKey: _apiKey, userInput: _userInput, ...projectConfig } = state;
       void _apiKey;
