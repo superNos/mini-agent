@@ -1,5 +1,5 @@
 export type AgentMessage = {
-  role: "system" | "user" | "assistant" | "tool";
+  role: "system" | "user" | "assistant";
   content: string;
 };
 
@@ -17,7 +17,7 @@ export class OpenAICompatibleModelProvider implements ModelProvider {
   constructor(private readonly options: OpenAICompatibleModelOptions) {}
 
   async complete(messages: AgentMessage[]) {
-    const response = await fetch(`${this.options.baseUrl.replace(/\/$/, "")}/chat/completions`, {
+    const response = await fetch(`${this.options.baseUrl.replace(/\/+$/, "")}/chat/completions`, {
       method: "POST",
       headers: {
         "content-type": "application/json",

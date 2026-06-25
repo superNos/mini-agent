@@ -30,7 +30,14 @@ function buildSystemPrompt(systemPrompt: string, tools: AnyTool[]) {
   const toolList =
     tools.length === 0
       ? "No tools are available."
-      : tools.map((tool) => `- ${tool.name}: ${tool.description}`).join("\n");
+      : tools
+          .map(
+            (tool) =>
+              `- ${tool.name}: ${tool.description}. Tool input example: ${toolInputExample(
+                tool.name,
+              )}`,
+          )
+          .join("\n");
 
   return [
     systemPrompt,
@@ -42,6 +49,12 @@ function buildSystemPrompt(systemPrompt: string, tools: AnyTool[]) {
     "Available tools:",
     toolList,
   ].join("\n");
+}
+
+function toolInputExample(toolName: string) {
+  if (toolName === "calculator") return '{"expression":"1 + 2"}';
+  if (toolName === "current-time") return "{}";
+  return "Use a JSON object matching this tool's input schema.";
 }
 
 function parseModelAction(modelOutput: string): ModelAction {
@@ -89,8 +102,33 @@ function errorMessage(error: unknown) {
   return error instanceof Error ? error.message : String(error);
 }
 
-function stringifyObservation(value: unknown) {
-  return JSON.stringify(value);
+type SafeJsonStringifyResult =
+  | {
+      ok: true;
+      value: string;
+    }
+  | {
+      ok: false;
+      error: string;
+    };
+
+function safeJsonStringify(value: unknown): SafeJsonStringifyResult {
+  try {
+    const serialized = JSON.stringify(value);
+    if (typeof serialized !== "string") {
+      return { ok: false, error: "JSON.stringify returned no JSON content" };
+    }
+    return { ok: true, value: serialized };
+  } catch (error) {
+    return { ok: false, error: errorMessage(error) };
+  }
+}
+
+function buildObservationContent(toolName: string, serializedOutput: string) {
+  return [
+    `Observation from tool "${toolName}": ${serializedOutput}`,
+    "Continue by returning JSON using the Agent protocol.",
+  ].join("\n");
 }
 
 export async function runAgent(input: RunAgentInput): Promise<RunAgentResult> {
@@ -167,6 +205,19 @@ export async function runAgent(input: RunAgentInput): Promise<RunAgentResult> {
       return { answer: "", trace };
     }
 
+    const serializedOutput = safeJsonStringify(toolOutput);
+    if (!serializedOutput.ok) {
+      trace.push({
+        step,
+        type: "error",
+        error: `Tool ${tool.name} output could not be serialized: ${serializedOutput.error}`,
+        modelOutput,
+        toolName: tool.name,
+        toolInput: validation.data,
+      });
+      return { answer: "", trace };
+    }
+
     trace.push({
       step,
       type: "tool",
@@ -176,8 +227,8 @@ export async function runAgent(input: RunAgentInput): Promise<RunAgentResult> {
     });
     messages.push({ role: "assistant", content: modelOutput });
     messages.push({
-      role: "tool",
-      content: stringifyObservation({ toolName: tool.name, toolOutput }),
+      role: "user",
+      content: buildObservationContent(tool.name, serializedOutput.value),
     });
   }
 
