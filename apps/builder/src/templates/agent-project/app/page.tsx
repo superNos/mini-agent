@@ -65,6 +65,7 @@ export default function Home() {
         </div>
 
         <textarea
+          aria-label="Agent input"
           className="min-h-32 w-full resize-y rounded-md border border-gray-300 bg-white p-3 text-sm text-gray-950 outline-none focus:border-gray-950"
           value={input}
           onChange={(event) => setInput(event.target.value)}

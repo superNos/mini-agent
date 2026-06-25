@@ -10,10 +10,11 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Missing OPENAI_API_KEY" }, { status: 400 });
   }
 
-  const body = (await request.json().catch(() => null)) as { input?: string } | null;
-  if (!body?.input) {
-    return NextResponse.json({ error: "Missing input" }, { status: 400 });
+  const body = (await request.json().catch(() => null)) as { input?: unknown } | null;
+  if (typeof body?.input !== "string" || body.input.trim().length === 0) {
+    return NextResponse.json({ error: "Input must be a non-empty string" }, { status: 400 });
   }
+  const input = body.input.trim();
 
   const result = await runAgent({
     model: new OpenAICompatibleModelProvider({
@@ -23,7 +24,7 @@ export async function POST(request: Request) {
     }),
     tools: getSelectedTools(AGENT_CONFIG.selectedToolIds),
     systemPrompt: AGENT_CONFIG.systemPrompt,
-    userInput: body.input,
+    userInput: input,
     maxSteps: 6,
   });
 
