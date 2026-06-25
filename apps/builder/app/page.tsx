@@ -203,6 +203,7 @@ export default function BuilderPage() {
   async function runAgent() {
     setIsRunning(true);
     setRunError("");
+    setRunResult(null);
     try {
       const response = await fetch("/api/agent/run", {
         method: "POST",
@@ -410,7 +411,7 @@ export default function BuilderPage() {
                     <p className="text-xs font-medium uppercase tracking-wide text-slate-500">
                       Relative project path
                     </p>
-                    <pre className="mt-1 overflow-auto rounded-md border border-slate-200 bg-white p-3 text-sm text-slate-800">
+                    <pre className="mt-1 overflow-hidden whitespace-pre-wrap break-words rounded-md border border-slate-200 bg-white p-3 text-sm text-slate-800">
                       {createResult.relativeProjectPath ?? createResult.projectPath ?? ""}
                     </pre>
                   </div>
@@ -418,7 +419,7 @@ export default function BuilderPage() {
                     <p className="text-xs font-medium uppercase tracking-wide text-slate-500">
                       Next commands
                     </p>
-                    <pre className="mt-1 min-h-20 overflow-auto rounded-md border border-slate-200 bg-white p-3 text-sm leading-6 text-slate-800">
+                    <pre className="mt-1 min-h-20 overflow-hidden whitespace-pre-wrap break-words rounded-md border border-slate-200 bg-white p-3 text-sm leading-6 text-slate-800">
                       {(createResult.nextCommands ?? []).join("\n")}
                     </pre>
                   </div>
