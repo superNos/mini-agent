@@ -1,71 +1,71 @@
-# mini-agent-builder Design
+# mini-agent-builder 设计文档
 
-## Purpose
+## 项目定位
 
-`mini-agent-builder` is an open-source visual Agent kernel builder. It helps a user configure a model, select kernel-level tools, write a system prompt, run a small Agent in the page, inspect the full trace, and generate a standalone Next.js Web Agent project.
+`mini-agent-builder` 是一个开源的可视化 Agent 内核创建工具。它帮助用户配置模型、选择内核级工具、编写 System Prompt、在页面中试跑一个小型 Agent、查看完整 Trace，并生成一个可以独立运行的 Next.js Web Agent 项目。
 
-The product is not an Agent template marketplace and does not ship business-role presets. The generated Agent is defined by the user's system prompt, selected tools, and future skill extensions.
+这个产品不是 Agent 模板市场，也不内置业务角色预设。生成出来的 Agent 由用户自己的 System Prompt、选择的工具，以及未来扩展的 Skill 决定。
 
-## Goals
+## 目标
 
-- Create a complete Web Agent project quickly.
-- Teach the basic Agent parts: Model, Tool, Skill, Loop, Trace.
-- Generate a project that runs independently from the Builder.
-- Show the full trace for every Agent run.
-- Keep the Agent core small enough for learners to read.
+- 快速创建一个完整 Web Agent 项目。
+- 帮用户理解 Agent 的基本组成：Model、Tool、Skill、Loop、Trace。
+- 生成的项目可以脱离 Builder 独立运行。
+- 每次 Agent 执行都能展示完整 Trace。
+- Agent Core 足够小，学习者可以直接读懂。
 
-## Non-Goals For MVP
+## MVP 不做什么
 
-- Login, accounts, or cloud deployment.
-- RAG, long-term memory, or multi-agent collaboration.
-- Web search.
-- Plugin marketplace.
-- Complex permissions.
-- Business presets such as planner, researcher, interview coach, or support agent.
-- Built-in role-like skills.
+- 登录、账号系统或云端部署。
+- RAG、长期记忆或多 Agent 协作。
+- Web search。
+- 插件市场。
+- 复杂权限系统。
+- 业务预设，例如 planner、researcher、interview coach、support agent。
+- 内置角色型 Skill。
 
-## Confirmed Product Decisions
+## 已确认的产品决策
 
-- Use a single Next.js Builder app for the MVP.
-- Generate projects into `generated/<project-slug>/`.
-- Do not persist API keys.
-- Do not inject real API keys into generated projects.
-- Include `calculator` and `current-time` tools only.
-- Keep the Skill selector, but show an empty state: no skills installed yet.
-- Preserve the Skill protocol as an extension point in the generated project.
-- Use a three-column workbench layout.
-- Use a simple JSON model-output protocol instead of SDK-specific tool calling.
+- MVP 使用一个单独的 Next.js Builder 应用。
+- 项目生成到 `generated/<project-slug>/`。
+- 不持久化 API key。
+- 不把真实 API key 注入生成项目。
+- 只内置 `calculator` 和 `current-time` 两个工具。
+- 保留 Skill selector，但展示空状态：当前没有安装 Skill。
+- 在生成项目中保留 Skill 协议，作为扩展点。
+- Builder 页面使用三栏工作台布局。
+- 使用简单 JSON 模型输出协议，不依赖特定 SDK 的 tool calling。
 
 ## Builder UI
 
-The primary screen is a three-column workbench.
+主页面是三栏工作台。
 
-### Left Panel: Agent Setup
+### 左侧面板：Agent Setup
 
-- Project name and slug.
-- Model configuration:
+- 项目名称和 slug。
+- 模型配置：
   - `baseUrl`
   - `model`
   - `apiKey`
-- Tool selector:
+- 工具选择：
   - `calculator`
   - `current-time`
-- Skill selector:
-  - empty state for MVP
-  - extension point explanation only
-- `Create Project` button.
+- Skill 选择：
+  - MVP 中展示空状态
+  - 只说明这里是扩展点
+- `Create Project` 按钮。
 
-### Center Panel: Prompt And Trial Run
+### 中间面板：Prompt And Trial Run
 
-- System Prompt editor.
-- User task input.
-- `Run Agent` button.
-- Final answer preview.
-- Project generation result path after creation.
+- System Prompt 编辑器。
+- 用户任务输入框。
+- `Run Agent` 按钮。
+- 最终回答预览。
+- 项目生成成功后的路径展示。
 
-### Right Panel: Trace Explorer
+### 右侧面板：Trace Explorer
 
-Displays each run step:
+展示每次运行的执行步骤：
 
 - model output
 - selected tool
@@ -74,21 +74,21 @@ Displays each run step:
 - final answer
 - errors
 
-The main user path is:
+主流程固定为：
 
 ```text
 Configure -> Run -> Inspect Trace -> Generate
 ```
 
-## Builder Backend
+## Builder 后端
 
-The Builder has two core APIs.
+Builder 后端只需要两个核心 API。
 
 ### `POST /api/agent/run`
 
-Runs the Agent inside the Builder for trial execution.
+用于在 Builder 页面内试跑 Agent。
 
-Request fields:
+请求字段：
 
 - `baseUrl`
 - `apiKey`
@@ -98,17 +98,17 @@ Request fields:
 - `selectedSkills`
 - `userInput`
 
-Behavior:
+行为：
 
-- Validate the request with Zod.
-- Build a model provider from request-only model settings.
-- Use the API key only for this request.
-- Load selected tools from the registry.
-- Load selected skills from the registry, which is empty for MVP.
-- Run the Agent loop with a small `maxSteps`.
-- Return the final answer and trace.
+- 使用 Zod 校验请求。
+- 基于本次请求中的模型配置创建 model provider。
+- API key 只在本次请求中使用。
+- 从 registry 加载已选择工具。
+- 从 registry 加载已选择 Skill；MVP 中为空。
+- 使用较小的 `maxSteps` 运行 Agent Loop。
+- 返回最终回答和 trace。
 
-Response shape:
+响应结构：
 
 ```ts
 {
@@ -119,9 +119,9 @@ Response shape:
 
 ### `POST /api/projects/create`
 
-Generates a standalone project.
+用于生成一个独立项目。
 
-Request fields:
+请求字段：
 
 - `projectName`
 - `projectSlug`
@@ -131,24 +131,24 @@ Request fields:
 - `selectedTools`
 - `selectedSkills`
 
-Behavior:
+行为：
 
-- Validate project name and slug.
-- Reject unsafe slugs and path traversal.
-- Reject generation when the output directory already exists.
-- Copy the Agent project template.
-- Write `src/agent/config.ts`.
-- Copy selected tool implementations.
-- Keep `src/skills/` as an empty extension point.
-- Generate `.env.example`.
-- Generate `README.md`.
-- Return the generated path and next commands.
+- 校验项目名称和 slug。
+- 拒绝不安全 slug 和路径穿越。
+- 如果输出目录已存在，则拒绝生成。
+- 复制 Agent 项目模板。
+- 写入 `src/agent/config.ts`。
+- 复制被选择的工具实现。
+- 保留 `src/skills/` 作为空扩展点。
+- 生成 `.env.example`。
+- 生成 `README.md`。
+- 返回生成路径和下一步命令。
 
-API keys are never written to disk.
+API key 永远不写入磁盘。
 
-## Shared Builder Modules
+## Builder 共享模块
 
-The Builder uses shared definitions so trial runs and generated projects do not drift.
+Builder 使用共享定义，避免页面试跑和生成项目之间出现行为漂移。
 
 ```text
 apps/builder/src/
@@ -171,7 +171,7 @@ apps/builder/src/
 
 ## Agent Core
 
-The Agent core is a readable loop:
+Agent Core 是一个可读的小循环：
 
 ```text
 user input
@@ -186,11 +186,11 @@ user input
 -> repeat
 ```
 
-### Model Output Protocol
+### 模型输出协议
 
-The model must return one of two JSON shapes.
+模型必须返回下面两种 JSON 之一。
 
-Tool call:
+工具调用：
 
 ```json
 {
@@ -202,7 +202,7 @@ Tool call:
 }
 ```
 
-Final answer:
+最终回答：
 
 ```json
 {
@@ -211,21 +211,21 @@ Final answer:
 }
 ```
 
-This keeps the MVP compatible with OpenAI-compatible chat completion providers without relying on provider-specific tool calling.
+这样 MVP 可以兼容 OpenAI-compatible chat completion provider，不依赖某个 provider 专属的 tool calling 能力。
 
-### Stop Conditions
+### 停止条件
 
-- The model returns a final answer.
-- `maxSteps` is reached.
-- The model returns invalid JSON.
-- The model requests an unknown tool.
-- Tool input fails schema validation.
-- Tool execution fails.
-- Provider request fails.
+- 模型返回 final answer。
+- 达到 `maxSteps`。
+- 模型返回无效 JSON。
+- 模型请求了不存在的工具。
+- 工具 input 没通过 schema 校验。
+- 工具执行失败。
+- provider 请求失败。
 
 ## Trace
 
-Trace exists for learning and debugging. Every important transition in the loop is recorded.
+Trace 的目标是学习和调试。Agent Loop 中每个关键转移都要被记录。
 
 ```ts
 type TraceStep = {
@@ -240,26 +240,26 @@ type TraceStep = {
 };
 ```
 
-Errors are visible in the UI and included in the trace.
+错误既要在 UI 中可见，也要包含在 trace 中。
 
 ## Tools
 
-MVP tools:
+MVP 工具：
 
 ```text
 calculator
 current-time
 ```
 
-No `web-search` tool is included in MVP.
+MVP 不包含 `web-search` 工具。
 
 ### Calculator
 
-Purpose:
+用途：
 
-- Demonstrate schema validation and deterministic tool execution.
+- 展示 schema 校验和确定性工具执行。
 
-Input:
+输入：
 
 ```ts
 {
@@ -267,7 +267,7 @@ Input:
 }
 ```
 
-Output:
+输出：
 
 ```ts
 {
@@ -275,21 +275,21 @@ Output:
 }
 ```
 
-The implementation must avoid arbitrary JavaScript execution. It should support a small arithmetic expression grammar only.
+实现不能执行任意 JavaScript。它只应该支持一个很小的四则运算表达式语法。
 
 ### Current Time
 
-Purpose:
+用途：
 
-- Demonstrate a tool with no user-controlled input and an external observation from runtime state.
+- 展示一个不依赖用户输入、从运行时状态产生 observation 的工具。
 
-Input:
+输入：
 
 ```ts
 {}
 ```
 
-Output:
+输出：
 
 ```ts
 {
@@ -301,35 +301,35 @@ Output:
 
 ## Skills
 
-Skills are a protocol and project extension point, not built-in business behavior.
+Skill 是协议和项目扩展点，不是内置业务行为。
 
-MVP Builder behavior:
+MVP Builder 行为：
 
-- Show the Skill selector.
-- Display `No skills installed yet`.
-- Do not include role-like skills.
+- 展示 Skill selector。
+- 显示 `No skills installed yet`。
+- 不包含角色型 Skill。
 
-Generated project behavior:
+生成项目行为：
 
-- Include `src/agent/skill.ts`.
-- Include an empty `src/skills/` directory.
-- Include README instructions for adding a skill.
+- 包含 `src/agent/skill.ts`。
+- 包含空的 `src/skills/` 目录。
+- 在 README 中说明如何添加 Skill。
 
 ## Template Generator
 
-Template source:
+模板源目录：
 
 ```text
 apps/builder/src/templates/agent-project/
 ```
 
-Generated output:
+生成输出目录：
 
 ```text
 generated/<project-slug>/
 ```
 
-The generated project includes:
+生成项目包含：
 
 ```text
 app/
@@ -352,7 +352,7 @@ package.json
 README.md
 ```
 
-The generator writes:
+生成器会写入：
 
 - project name
 - project slug
@@ -360,78 +360,78 @@ The generator writes:
 - model
 - system prompt
 - selected tool IDs
-- selected skill IDs, empty for MVP
+- selected skill IDs，MVP 中为空
 
-The generator never writes:
+生成器永远不会写入：
 
-- real API keys
-- trial run messages
-- trace history
-- business Agent presets
-- role-like skills
+- 真实 API key
+- 试跑消息
+- trace 历史
+- 业务 Agent preset
+- 角色型 Skill
 
-## Generated Project
+## 生成项目
 
-The generated project is a complete Next.js app. It can be copied, committed, and run without the Builder.
+生成项目是一个完整 Next.js 应用。它可以被复制、提交，并且不依赖 Builder 独立运行。
 
-Required commands:
+运行命令：
 
 ```bash
 npm install
 npm run dev
 ```
 
-The generated UI includes:
+生成项目 UI 包含：
 
-- a chat/task input
-- final answer display
-- trace display
-- local API route at `/api/agent/run`
+- chat/task 输入框
+- final answer 展示
+- trace 展示
+- 本地 API route：`/api/agent/run`
 
-The generated API reads model credentials from environment variables.
+生成项目 API 从环境变量读取模型凭证。
 
-## Error Handling
+## 错误处理
 
-The Builder and generated project should surface clear errors for:
+Builder 和生成项目都应该给出清晰错误：
 
-- missing API key
-- invalid base URL
-- provider request failure
-- invalid JSON model output
-- unknown tool
-- invalid tool input
-- tool execution failure
-- max steps reached
-- project slug validation failure
-- output directory already exists
-- file copy or write failure
+- 缺少 API key
+- 无效 base URL
+- provider 请求失败
+- 模型输出不是合法 JSON
+- 未知工具
+- 无效工具 input
+- 工具执行失败
+- 达到 max steps
+- project slug 校验失败
+- 输出目录已存在
+- 文件复制或写入失败
 
-Each Agent execution error should be represented in Trace.
+每个 Agent 执行错误都应该进入 Trace。
 
-## Testing Strategy
+## 测试策略
 
-Core tests should cover:
+核心测试覆盖：
 
-- tool registry returns selected tools
-- calculator validates input and executes supported arithmetic
-- current-time returns a stable object shape
-- Agent stops on final output
-- Agent executes a tool call and records tool trace
-- Agent returns error trace for invalid JSON
-- Agent returns error trace for unknown tools
-- generator creates required files
-- generator omits real API keys
-- project slug validation rejects unsafe paths
+- tool registry 能返回被选择的工具
+- calculator 能校验 input 并执行支持的四则运算
+- current-time 返回稳定对象结构
+- Agent 遇到 final output 会停止
+- Agent 能执行 tool call 并记录 tool trace
+- Agent 遇到无效 JSON 会返回 error trace
+- Agent 遇到未知工具会返回 error trace
+- generator 能创建必要文件
+- generator 不会写入真实 API key
+- project slug 校验会拒绝不安全路径
 
-## MVP Acceptance Criteria
+## MVP 验收标准
 
-- Builder runs with `npm run dev`.
-- Builder page can configure model, tools, system prompt, and user input.
-- Builder trial run returns answer and trace.
-- Builder trace shows model, tool, final, and error steps.
-- `Create Project` generates `generated/<project-slug>/`.
-- Generated project does not contain a real API key.
-- Generated project can run independently with `npm install && npm run dev`.
-- Generated project can execute the Agent and display trace.
-- README explains Model, Tool, Skill, Loop, and Trace.
+- Builder 可以通过 `npm run dev` 启动。
+- Builder 页面可以配置 model、tools、system prompt 和 user input。
+- Builder 试跑会返回 answer 和 trace。
+- Builder trace 能展示 model、tool、final 和 error 步骤。
+- `Create Project` 可以生成 `generated/<project-slug>/`。
+- 生成项目不包含真实 API key。
+- 生成项目可以通过 `npm install && npm run dev` 独立运行。
+- 生成项目可以执行 Agent，并展示 trace。
+- README 能讲清 Model、Tool、Skill、Loop 和 Trace。
 
