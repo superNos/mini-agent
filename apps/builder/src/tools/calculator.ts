@@ -26,6 +26,9 @@ function tokenize(expression: string): Token[] {
         value += expression[index];
         index += 1;
       }
+      if (!/^(?:\d+\.?\d*|\.\d+)$/.test(value)) {
+        throw new Error("Invalid number");
+      }
       const number = Number(value);
       if (!Number.isFinite(number)) {
         throw new Error("Invalid number");

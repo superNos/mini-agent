@@ -19,4 +19,18 @@ describe("calculatorTool", () => {
       calculatorTool.run({ expression: "process.exit()" }),
     ).rejects.toThrow("Unsupported character");
   });
+
+  it("rejects malformed numbers with multiple decimal points", async () => {
+    await expect(calculatorTool.run({ expression: "1..2" })).rejects.toThrow("Invalid number");
+  });
+
+  it("rejects a decimal point without digits", async () => {
+    await expect(calculatorTool.run({ expression: "." })).rejects.toThrow("Invalid number");
+  });
+
+  it("rejects non-finite results", async () => {
+    await expect(calculatorTool.run({ expression: "2 / 0" })).rejects.toThrow(
+      "Result is not finite",
+    );
+  });
 });
