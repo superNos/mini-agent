@@ -13,10 +13,10 @@ npm run dev
 运行 Agent 前，在 `.env.local` 中设置：
 
 ```text
-OPENAI_API_KEY=your-api-key
+OPENAI_API_KEY=
 ```
 
-默认模型接口遵循 OpenAI-compatible chat completion 协议。
+把你的 key 填在等号后面。默认模型接口遵循 OpenAI-compatible chat completion 协议。
 
 ## Agent 组成
 
