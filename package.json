@@ -1,0 +1,17 @@
+{
+  "name": "mini-agent-builder",
+  "private": true,
+  "workspaces": [
+    "apps/*"
+  ],
+  "scripts": {
+    "dev": "npm --workspace apps/builder run dev",
+    "build": "npm --workspace apps/builder run build",
+    "lint": "npm --workspace apps/builder run lint",
+    "test": "npm --workspace apps/builder run test",
+    "typecheck": "npm --workspace apps/builder run typecheck"
+  },
+  "engines": {
+    "node": ">=22.0.0"
+  }
+}
