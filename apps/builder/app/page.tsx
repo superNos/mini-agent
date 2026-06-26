@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { groupTraceSteps } from "@/agent/trace-groups";
+import type { TraceCardGroup } from "@/agent/trace-groups";
 import type { AgentMessage } from "@/agent/model";
 import type { TraceStep } from "@/agent/trace";
 import type { SkillId, ToolId } from "@/schemas/agent-config";
@@ -194,7 +196,7 @@ function classNames(...values: Array<string | false | null | undefined>) {
 }
 
 function getTraceSummary(trace: TraceStep[] | undefined) {
-  const steps = trace ?? [];
+  const steps = groupTraceSteps(trace ?? []);
   return {
     total: steps.length,
     model: steps.filter((step) => step.type === "model").length,
@@ -213,6 +215,15 @@ function stepTitle(step: TraceStep) {
   if (step.type === "observation") return `观察结果入队 · ${step.toolName}`;
   if (step.type === "final") return "最终回答";
   return "运行错误";
+}
+
+function traceGroupTitle(group: TraceCardGroup) {
+  const step = group.primary;
+  if (group.type === "model") return group.completed ? "模型调用完成" : "开始调用模型";
+  if (group.type === "tool" && step.type === "tool") {
+    return `${group.completed ? "工具调用完成" : "开始调用工具"} · ${step.toolName}`;
+  }
+  return stepTitle(step);
 }
 
 function stepBadgeClass(type: TraceStep["type"]) {
@@ -234,7 +245,7 @@ function stepIconClass(type: TraceStep["type"]) {
 }
 
 function getTraceFilterCount(trace: TraceStep[] | undefined, filter: TraceFilter) {
-  const steps = trace ?? [];
+  const steps = groupTraceSteps(trace ?? []);
   if (filter === "all") return steps.length;
   return steps.filter((step) => step.type === filter).length;
 }
@@ -963,17 +974,82 @@ function TraceDetails({ step }: { step: TraceStep }) {
   );
 }
 
-function TraceCard({ step, defaultOpen }: { step: TraceStep; defaultOpen: boolean }) {
+function TraceGroupDetails({ group }: { group: TraceCardGroup }) {
+  if (group.type === "model" && (group.started || group.completed)) {
+    const completed = group.completed?.type === "model" ? group.completed : undefined;
+    const started = group.started?.type === "model" ? group.started : undefined;
+    const step = completed ?? started;
+    if (!step) return <TraceDetails step={group.primary} />;
+
+    return (
+      <div className="mt-3 space-y-3">
+        <div className="flex items-center justify-between gap-2">
+          <p className="text-xs font-medium text-zinc-500">
+            {completed ? "模型请求已完成" : "模型请求进行中"}
+          </p>
+          <DurationText durationMs={completed?.durationMs} />
+        </div>
+        <div>
+          <p className="mb-1.5 text-xs font-medium text-zinc-500">输入 messages</p>
+          <ModelInputBlock messages={step.modelInput} />
+        </div>
+        {completed ? (
+          <div>
+            <p className="mb-1.5 text-xs font-medium text-zinc-500">输出</p>
+            <ModelOutputBlock modelOutput={completed.modelOutput} />
+          </div>
+        ) : null}
+      </div>
+    );
+  }
+
+  if (group.type === "tool" && (group.started || group.completed)) {
+    const completed = group.completed?.type === "tool" ? group.completed : undefined;
+    const started = group.started?.type === "tool" ? group.started : undefined;
+    const step = completed ?? started;
+    if (!step) return <TraceDetails step={group.primary} />;
+
+    return (
+      <div className="mt-3 space-y-3">
+        <div className="flex items-center justify-between gap-2">
+          <p className="text-xs font-medium text-zinc-500">
+            {completed ? "工具调用已完成" : "工具调用进行中"}
+          </p>
+          <DurationText durationMs={completed?.durationMs} />
+        </div>
+        <div>
+          <p className="mb-1.5 text-xs font-medium text-zinc-500">输入</p>
+          <JsonTreeBlock value={step.toolInput} />
+        </div>
+        {completed ? (
+          <div>
+            <p className="mb-1.5 text-xs font-medium text-zinc-500">输出</p>
+            <JsonTreeBlock value={completed.toolOutput} />
+          </div>
+        ) : null}
+      </div>
+    );
+  }
+
+  return <TraceDetails step={group.primary} />;
+}
+
+function groupPhaseLabel(group: TraceCardGroup) {
+  if ((group.type === "model" || group.type === "tool") && group.completed) return "completed";
+  return group.primary.phase;
+}
+
+function TraceCard({ group, defaultOpen }: { group: TraceCardGroup; defaultOpen: boolean }) {
   const [isOpen, setIsOpen] = useState(defaultOpen);
-  const isError = step.type === "error";
+  const isError = group.type === "error";
   const Icon =
-    step.type === "tool"
+    group.type === "tool"
       ? Wrench
-      : step.type === "action"
+      : group.type === "action"
         ? Settings2
-        : step.type === "observation"
+        : group.type === "observation"
           ? Activity
-          : step.type === "final"
+          : group.type === "final"
             ? CheckCircle2
             : isError
               ? AlertCircle
@@ -985,7 +1061,7 @@ function TraceCard({ step, defaultOpen }: { step: TraceStep; defaultOpen: boolea
       <span
         className={classNames(
           "absolute left-0 top-1 inline-flex h-6 w-6 items-center justify-center rounded-full border",
-          stepIconClass(step.type),
+          stepIconClass(group.type),
         )}
         aria-hidden="true"
       >
@@ -999,21 +1075,21 @@ function TraceCard({ step, defaultOpen }: { step: TraceStep; defaultOpen: boolea
         >
           <span className="min-w-0">
             <span className="mb-1 flex flex-wrap items-center gap-2">
-              <span className="text-xs font-medium text-zinc-500">第 {step.step} 步</span>
-              <span className={classNames("rounded-md border px-1.5 py-0.5 text-[11px] font-medium", stepBadgeClass(step.type))}>
-                {step.type}
+              <span className="text-xs font-medium text-zinc-500">第 {group.step} 步</span>
+              <span className={classNames("rounded-md border px-1.5 py-0.5 text-[11px] font-medium", stepBadgeClass(group.type))}>
+                {group.type}
               </span>
               <span className="rounded-md border border-zinc-200 bg-zinc-50 px-1.5 py-0.5 text-[11px] font-medium text-zinc-500">
-                {step.phase}
+                {groupPhaseLabel(group)}
               </span>
             </span>
-            <span className="block truncate text-sm font-semibold text-zinc-950">{stepTitle(step)}</span>
+            <span className="block truncate text-sm font-semibold text-zinc-950">{traceGroupTitle(group)}</span>
           </span>
           <span className="rounded-md border border-zinc-200 bg-zinc-50 px-2 py-1 text-[11px] font-medium text-zinc-500">
             {isOpen ? "收起" : "详情"}
           </span>
         </button>
-        {isOpen ? <TraceDetails step={step} /> : null}
+        {isOpen ? <TraceGroupDetails group={group} /> : null}
       </div>
     </article>
   );
@@ -1033,8 +1109,9 @@ function TraceSidebar({
   const [activeFilter, setActiveFilter] = useState<TraceFilter>("all");
   const summary = getTraceSummary(trace);
   const hasError = summary.error > 0;
+  const traceGroups = groupTraceSteps(trace ?? []);
   const filteredTrace =
-    activeFilter === "all" ? (trace ?? []) : (trace ?? []).filter((step) => step.type === activeFilter);
+    activeFilter === "all" ? traceGroups : traceGroups.filter((group) => group.type === activeFilter);
 
   if (isCollapsed) {
     return (
@@ -1107,11 +1184,11 @@ function TraceSidebar({
 
         {filteredTrace.length ? (
           <div className="space-y-4">
-            {filteredTrace.map((step, index) => (
+            {filteredTrace.map((group, index) => (
               <TraceCard
-                key={`${index}-${step.step}-${step.type}`}
-                step={step}
-                defaultOpen={step.type === "error" || step.type === "final" || index === filteredTrace.length - 1}
+                key={group.key}
+                group={group}
+                defaultOpen={group.type === "error" || group.type === "final" || index === filteredTrace.length - 1}
               />
             ))}
           </div>
