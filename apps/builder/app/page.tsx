@@ -219,19 +219,15 @@ function SectionHeader({ title }: { title: string }) {
 function ConfigSidebar({
   state,
   isCollapsed,
-  isCreating,
   onToggleCollapse,
   onFieldChange,
   onToggleTool,
-  onCreateProject,
 }: {
   state: BuilderState;
   isCollapsed: boolean;
-  isCreating: boolean;
   onToggleCollapse: () => void;
   onFieldChange: <Key extends keyof BuilderState>(field: Key, value: BuilderState[Key]) => void;
   onToggleTool: (toolId: ToolId) => void;
-  onCreateProject: () => void;
 }) {
   if (isCollapsed) {
     return (
@@ -269,19 +265,6 @@ function ConfigSidebar({
           <span className="absolute -right-0.5 -top-0.5 min-w-4 rounded-full bg-zinc-700 px-1 text-[10px] font-semibold leading-4 text-white">
             {state.selectedSkills.length}
           </span>
-        </button>
-        <button
-          type="button"
-          title="生成项目"
-          onClick={onCreateProject}
-          disabled={isCreating}
-          className="mt-auto inline-flex h-9 w-9 items-center justify-center rounded-md bg-zinc-950 text-white transition hover:bg-zinc-800 disabled:cursor-not-allowed disabled:bg-zinc-400"
-        >
-          {isCreating ? (
-            <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
-          ) : (
-            <FolderPlus className="h-4 w-4" aria-hidden="true" />
-          )}
         </button>
       </aside>
     );
@@ -393,21 +376,6 @@ function ConfigSidebar({
           </div>
         </section>
 
-        <section className="border-t border-zinc-200 pt-5">
-          <button
-            type="button"
-            onClick={onCreateProject}
-            disabled={isCreating}
-            className="inline-flex h-10 w-full items-center justify-center gap-2 whitespace-nowrap rounded-md bg-zinc-950 px-4 text-sm font-semibold text-white transition hover:bg-zinc-800 disabled:cursor-not-allowed disabled:bg-zinc-400"
-          >
-            {isCreating ? (
-              <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
-            ) : (
-              <FolderPlus className="h-4 w-4" aria-hidden="true" />
-            )}
-            {isCreating ? "生成中..." : "生成项目"}
-          </button>
-        </section>
       </div>
     </aside>
   );
@@ -912,45 +880,20 @@ export default function BuilderPage() {
           </div>
 
           <div className="flex items-center gap-2">
-            <IconButton label={isConfigCollapsed ? "展开配置" : "收起配置"} onClick={() => setIsConfigCollapsed((current) => !current)}>
-              {isConfigCollapsed ? (
-                <PanelLeftOpen className="h-4 w-4" aria-hidden="true" />
-              ) : (
-                <PanelLeftClose className="h-4 w-4" aria-hidden="true" />
-              )}
-            </IconButton>
-            <IconButton label={isTraceCollapsed ? "展开轨迹" : "收起轨迹"} onClick={() => setIsTraceCollapsed((current) => !current)}>
-              {isTraceCollapsed ? (
-                <PanelRightOpen className="h-4 w-4" aria-hidden="true" />
-              ) : (
-                <PanelRightClose className="h-4 w-4" aria-hidden="true" />
-              )}
-            </IconButton>
             <button
               type="button"
               onClick={createProject}
               disabled={isCreating}
-              className="hidden h-9 items-center justify-center gap-2 whitespace-nowrap rounded-md border border-zinc-200 bg-white px-3 text-sm font-semibold text-zinc-950 transition hover:bg-zinc-50 disabled:cursor-not-allowed disabled:text-zinc-400 sm:inline-flex"
+              aria-label="生成项目"
+              title="生成项目"
+              className="inline-flex h-9 w-9 items-center justify-center gap-2 whitespace-nowrap rounded-md border border-zinc-200 bg-white text-sm font-semibold text-zinc-950 transition hover:bg-zinc-50 disabled:cursor-not-allowed disabled:text-zinc-400 sm:w-auto sm:px-3"
             >
               {isCreating ? (
                 <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
               ) : (
                 <FolderPlus className="h-4 w-4" aria-hidden="true" />
               )}
-              生成项目
-            </button>
-            <button
-              type="button"
-              onClick={runAgent}
-              disabled={isRunning}
-              className="inline-flex h-9 items-center justify-center gap-2 whitespace-nowrap rounded-md bg-indigo-600 px-3 text-sm font-semibold text-white transition hover:bg-indigo-500 disabled:cursor-not-allowed disabled:bg-indigo-300"
-            >
-              {isRunning ? (
-                <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
-              ) : (
-                <Play className="h-4 w-4" aria-hidden="true" />
-              )}
-              运行
+              <span className="hidden sm:inline">{isCreating ? "生成中..." : "生成项目"}</span>
             </button>
           </div>
         </div>
@@ -971,11 +914,9 @@ export default function BuilderPage() {
         <ConfigSidebar
           state={state}
           isCollapsed={isConfigCollapsed}
-          isCreating={isCreating}
           onToggleCollapse={() => setIsConfigCollapsed((current) => !current)}
           onFieldChange={updateField}
           onToggleTool={toggleTool}
-          onCreateProject={createProject}
         />
 
         <div className="min-w-0 space-y-3">
