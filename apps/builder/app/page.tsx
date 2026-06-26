@@ -25,7 +25,7 @@ import {
   Wrench,
   X,
 } from "lucide-react";
-import { collapseAllNested, defaultStyles, JsonView } from "react-json-view-lite";
+import { collapseAllNested, JsonView } from "react-json-view-lite";
 
 type BuilderState = {
   projectName: string;
@@ -58,6 +58,21 @@ type RunResult = {
   answer?: string;
   trace?: TraceStep[];
 };
+
+type RunStreamEvent =
+  | {
+      type: "trace";
+      step: TraceStep;
+    }
+  | {
+      type: "final";
+      answer: string;
+      trace: TraceStep[];
+    }
+  | {
+      type: "error";
+      error: string;
+    };
 
 type CreateResult = {
   projectPath?: string;
@@ -92,6 +107,29 @@ const TRACE_FILTERS: Array<{ id: TraceFilter; label: string }> = [
   { id: "final", label: "最终" },
   { id: "error", label: "错误" },
 ];
+
+const JSON_VIEW_STYLES = {
+  container: "text-xs leading-5 text-zinc-800",
+  childFieldsContainer: "m-0 list-none border-l border-zinc-200 pl-3",
+  basicChildStyle: "m-0 py-0.5",
+  label: "mr-1 font-semibold text-zinc-700",
+  clickableLabel: "mr-1 cursor-pointer font-semibold text-zinc-700 hover:text-indigo-700",
+  collapseIcon:
+    "mr-1 inline-flex h-4 w-4 items-center justify-center rounded border border-zinc-200 bg-white text-[10px] text-zinc-500 before:content-['-']",
+  expandIcon:
+    "mr-1 inline-flex h-4 w-4 items-center justify-center rounded border border-zinc-200 bg-white text-[10px] text-zinc-500 before:content-['+']",
+  collapsedContent: "ml-1 rounded bg-zinc-100 px-1.5 py-0.5 text-[11px] text-zinc-500",
+  nullValue: "text-zinc-500",
+  undefinedValue: "text-zinc-500",
+  numberValue: "text-blue-600",
+  stringValue: "text-emerald-700",
+  booleanValue: "text-violet-700",
+  otherValue: "text-zinc-700",
+  punctuation: "text-zinc-400",
+  noQuotesForStringValues: false,
+  quotesForFieldNames: false,
+  stringifyStringValues: true,
+};
 
 function formatJson(value: unknown) {
   try {
@@ -186,11 +224,11 @@ function JsonTreeBlock({ value }: { value: unknown }) {
   }
 
   return (
-    <div className="max-h-72 overflow-auto rounded-md border border-zinc-200 bg-white p-3 font-mono text-xs leading-5 text-zinc-800">
+    <div className="max-h-72 overflow-auto rounded-md border border-zinc-200 bg-zinc-50/70 p-3 font-mono text-xs leading-5 text-zinc-800">
       <JsonView
         data={value}
         shouldExpandNode={collapseAllNested}
-        style={defaultStyles}
+        style={JSON_VIEW_STYLES}
         clickToExpandNode
         compactTopLevel
       />
@@ -904,16 +942,68 @@ export default function BuilderPage() {
   async function runAgent() {
     setIsRunning(true);
     setRunError("");
-    setRunResult(null);
+    setRunResult({ answer: "", trace: [] });
     try {
       const response = await fetch("/api/agent/run", {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify(state),
       });
-      const data = await response.json();
-      if (!response.ok) throw new Error(data.error ?? "运行失败");
-      setRunResult(data);
+      if (!response.ok) {
+        const data = await response.json().catch(() => null);
+        throw new Error(
+          data && typeof data === "object" && "error" in data && typeof data.error === "string"
+            ? data.error
+            : "运行失败",
+        );
+      }
+
+      if (!response.body) {
+        throw new Error("运行响应缺少流式内容");
+      }
+
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = "";
+      let answer = "";
+      let trace: TraceStep[] = [];
+
+      function applyEvent(event: RunStreamEvent) {
+        if (event.type === "trace") {
+          trace = [...trace, event.step];
+          setRunResult({ answer, trace });
+          return;
+        }
+
+        if (event.type === "final") {
+          answer = event.answer;
+          trace = event.trace;
+          setRunResult({ answer, trace });
+          return;
+        }
+
+        throw new Error(event.error);
+      }
+
+      function processLine(line: string) {
+        const trimmed = line.trim();
+        if (!trimmed) return;
+        applyEvent(JSON.parse(trimmed) as RunStreamEvent);
+      }
+
+      for (;;) {
+        const { done, value } = await reader.read();
+        if (value) {
+          buffer += decoder.decode(value, { stream: !done });
+          const lines = buffer.split("\n");
+          buffer = lines.pop() ?? "";
+          for (const line of lines) processLine(line);
+        }
+        if (done) break;
+      }
+
+      buffer += decoder.decode();
+      processLine(buffer);
     } catch (error) {
       setRunError(error instanceof Error ? error.message : String(error));
     } finally {

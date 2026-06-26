@@ -8,6 +8,7 @@ export type RunAgentInput = {
   systemPrompt: string;
   userInput: string;
   maxSteps?: number;
+  onTraceStep?: (step: TraceStep) => void | Promise<void>;
 };
 
 export type RunAgentResult = {
@@ -131,6 +132,15 @@ function buildObservationContent(toolName: string, serializedOutput: string) {
   ].join("\n");
 }
 
+async function appendTrace(
+  trace: TraceStep[],
+  step: TraceStep,
+  onTraceStep?: RunAgentInput["onTraceStep"],
+) {
+  trace.push(step);
+  await onTraceStep?.(step);
+}
+
 export async function runAgent(input: RunAgentInput): Promise<RunAgentResult> {
   const maxSteps = input.maxSteps ?? 8;
   const trace: TraceStep[] = [];
@@ -145,48 +155,60 @@ export async function runAgent(input: RunAgentInput): Promise<RunAgentResult> {
     try {
       modelOutput = await input.model.complete(messages);
     } catch (error) {
-      trace.push({ step, type: "error", error: errorMessage(error) });
+      await appendTrace(trace, { step, type: "error", error: errorMessage(error) }, input.onTraceStep);
       return { answer: "", trace };
     }
 
-    trace.push({ step, type: "model", modelOutput });
+    await appendTrace(trace, { step, type: "model", modelOutput }, input.onTraceStep);
 
     let action: ModelAction;
     try {
       action = parseModelAction(modelOutput);
     } catch (error) {
-      trace.push({ step, type: "error", error: errorMessage(error), modelOutput });
+      await appendTrace(
+        trace,
+        { step, type: "error", error: errorMessage(error), modelOutput },
+        input.onTraceStep,
+      );
       return { answer: "", trace };
     }
 
     if (action.type === "final") {
-      trace.push({ step, type: "final", finalAnswer: action.answer });
+      await appendTrace(trace, { step, type: "final", finalAnswer: action.answer }, input.onTraceStep);
       return { answer: action.answer, trace };
     }
 
     const tool = input.tools.find((candidate) => candidate.name === action.toolName);
     if (!tool) {
-      trace.push({
-        step,
-        type: "error",
-        error: `Unknown tool: ${action.toolName}`,
-        modelOutput,
-        toolName: action.toolName,
-        toolInput: action.toolInput,
-      });
+      await appendTrace(
+        trace,
+        {
+          step,
+          type: "error",
+          error: `Unknown tool: ${action.toolName}`,
+          modelOutput,
+          toolName: action.toolName,
+          toolInput: action.toolInput,
+        },
+        input.onTraceStep,
+      );
       return { answer: "", trace };
     }
 
     const validation = tool.schema.safeParse(action.toolInput);
     if (!validation.success) {
-      trace.push({
-        step,
-        type: "error",
-        error: `Invalid input for tool ${tool.name}: ${validation.error.message}`,
-        modelOutput,
-        toolName: tool.name,
-        toolInput: action.toolInput,
-      });
+      await appendTrace(
+        trace,
+        {
+          step,
+          type: "error",
+          error: `Invalid input for tool ${tool.name}: ${validation.error.message}`,
+          modelOutput,
+          toolName: tool.name,
+          toolInput: action.toolInput,
+        },
+        input.onTraceStep,
+      );
       return { answer: "", trace };
     }
 
@@ -194,37 +216,49 @@ export async function runAgent(input: RunAgentInput): Promise<RunAgentResult> {
     try {
       toolOutput = await tool.run(validation.data);
     } catch (error) {
-      trace.push({
-        step,
-        type: "error",
-        error: `Tool ${tool.name} failed: ${errorMessage(error)}`,
-        modelOutput,
-        toolName: tool.name,
-        toolInput: validation.data,
-      });
+      await appendTrace(
+        trace,
+        {
+          step,
+          type: "error",
+          error: `Tool ${tool.name} failed: ${errorMessage(error)}`,
+          modelOutput,
+          toolName: tool.name,
+          toolInput: validation.data,
+        },
+        input.onTraceStep,
+      );
       return { answer: "", trace };
     }
 
     const serializedOutput = safeJsonStringify(toolOutput);
     if (!serializedOutput.ok) {
-      trace.push({
-        step,
-        type: "error",
-        error: `Tool ${tool.name} output could not be serialized: ${serializedOutput.error}`,
-        modelOutput,
-        toolName: tool.name,
-        toolInput: validation.data,
-      });
+      await appendTrace(
+        trace,
+        {
+          step,
+          type: "error",
+          error: `Tool ${tool.name} output could not be serialized: ${serializedOutput.error}`,
+          modelOutput,
+          toolName: tool.name,
+          toolInput: validation.data,
+        },
+        input.onTraceStep,
+      );
       return { answer: "", trace };
     }
 
-    trace.push({
-      step,
-      type: "tool",
-      toolName: tool.name,
-      toolInput: validation.data,
-      toolOutput,
-    });
+    await appendTrace(
+      trace,
+      {
+        step,
+        type: "tool",
+        toolName: tool.name,
+        toolInput: validation.data,
+        toolOutput,
+      },
+      input.onTraceStep,
+    );
     messages.push({ role: "assistant", content: modelOutput });
     messages.push({
       role: "user",
@@ -232,10 +266,14 @@ export async function runAgent(input: RunAgentInput): Promise<RunAgentResult> {
     });
   }
 
-  trace.push({
-    step: maxSteps,
-    type: "error",
-    error: `Max steps reached: ${maxSteps}`,
-  });
+  await appendTrace(
+    trace,
+    {
+      step: maxSteps,
+      type: "error",
+      error: `Max steps reached: ${maxSteps}`,
+    },
+    input.onTraceStep,
+  );
   return { answer: "", trace };
 }

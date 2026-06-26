@@ -4,6 +4,10 @@ import { OpenAICompatibleModelProvider } from "@/agent/model";
 import { getToolsByIds } from "@/registry/tools";
 import { builderRunRequestSchema } from "@/schemas/agent-config";
 
+function errorMessage(error: unknown) {
+  return error instanceof Error ? error.message : String(error);
+}
+
 export async function POST(request: Request) {
   const json = await request.json().catch(() => null);
   const parsed = builderRunRequestSchema.safeParse(json);
@@ -20,14 +24,36 @@ export async function POST(request: Request) {
     apiKey: parsed.data.apiKey,
     model: parsed.data.model,
   });
+  const encoder = new TextEncoder();
 
-  const result = await runAgent({
-    model,
-    tools: getToolsByIds(parsed.data.selectedTools),
-    systemPrompt: parsed.data.systemPrompt,
-    userInput: parsed.data.userInput,
-    maxSteps: 6,
+  const stream = new ReadableStream({
+    async start(controller) {
+      function send(event: unknown) {
+        controller.enqueue(encoder.encode(`${JSON.stringify(event)}\n`));
+      }
+
+      try {
+        const result = await runAgent({
+          model,
+          tools: getToolsByIds(parsed.data.selectedTools),
+          systemPrompt: parsed.data.systemPrompt,
+          userInput: parsed.data.userInput,
+          maxSteps: 6,
+          onTraceStep: (step) => send({ type: "trace", step }),
+        });
+        send({ type: "final", answer: result.answer, trace: result.trace });
+      } catch (error) {
+        send({ type: "error", error: errorMessage(error) });
+      } finally {
+        controller.close();
+      }
+    },
   });
 
-  return NextResponse.json(result);
+  return new Response(stream, {
+    headers: {
+      "content-type": "application/x-ndjson; charset=utf-8",
+      "cache-control": "no-cache, no-transform",
+    },
+  });
 }
