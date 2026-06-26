@@ -23,6 +23,7 @@ import {
   Play,
   Settings2,
   Wrench,
+  X,
 } from "lucide-react";
 
 type BuilderState = {
@@ -451,54 +452,20 @@ function PromptEditor({
 function ObservationWorkspace({
   runResult,
   runError,
-  createResult,
-  createError,
-  activeTab,
-  onChangeTab,
 }: {
   runResult: RunResult | null;
   runError: string;
-  createResult: CreateResult | null;
-  createError: string;
-  activeTab: "answer" | "project";
-  onChangeTab: (tab: "answer" | "project") => void;
 }) {
   return (
     <section className="overflow-hidden rounded-lg border border-zinc-200 bg-white shadow-sm">
-      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-zinc-200 px-4 py-3">
+      <div className="border-b border-zinc-200 px-4 py-3">
         <div>
-          <h2 className="text-sm font-semibold text-zinc-950">观察结果</h2>
-        </div>
-        <div className="inline-flex rounded-md border border-zinc-200 bg-zinc-50 p-0.5">
-          <button
-            type="button"
-            onClick={() => onChangeTab("answer")}
-            className={classNames(
-              "rounded px-3 py-1.5 text-xs font-medium transition",
-              activeTab === "answer" ? "bg-white text-zinc-950 shadow-sm" : "text-zinc-500 hover:text-zinc-950",
-            )}
-          >
-            回答
-          </button>
-          <button
-            type="button"
-            onClick={() => onChangeTab("project")}
-            className={classNames(
-              "rounded px-3 py-1.5 text-xs font-medium transition",
-              activeTab === "project" ? "bg-white text-zinc-950 shadow-sm" : "text-zinc-500 hover:text-zinc-950",
-            )}
-          >
-            生成结果
-          </button>
+          <h2 className="text-sm font-semibold text-zinc-950">Agent 回答</h2>
         </div>
       </div>
 
       <div className="min-h-64 p-4">
-        {activeTab === "answer" ? (
-          <AnswerPanel runResult={runResult} runError={runError} />
-        ) : (
-          <GenerationResultPanel createResult={createResult} createError={createError} />
-        )}
+        <AnswerPanel runResult={runResult} runError={runError} />
       </div>
     </section>
   );
@@ -524,46 +491,97 @@ function AnswerPanel({ runResult, runError }: { runResult: RunResult | null; run
   );
 }
 
-function GenerationResultPanel({
+function CreateProjectDialog({
+  isOpen,
+  isCreating,
   createResult,
   createError,
+  onClose,
 }: {
+  isOpen: boolean;
+  isCreating: boolean;
   createResult: CreateResult | null;
   createError: string;
+  onClose: () => void;
 }) {
-  if (createError) {
-    return (
-      <div className="rounded-md border border-red-200 bg-red-50 p-4 text-sm leading-6 text-red-800">
-        <div className="mb-2 flex items-center gap-2 font-semibold">
-          <AlertCircle className="h-4 w-4" aria-hidden="true" />
-          生成失败
-        </div>
-        {createError}
-      </div>
-    );
-  }
-
-  if (!createResult) {
-    return (
-      <div className="min-h-52 rounded-md border border-dashed border-zinc-300 bg-zinc-50 p-4 text-sm leading-6 text-zinc-600">
-        创建项目后会在这里显示输出路径和后续命令。
-      </div>
-    );
-  }
+  if (!isOpen) return null;
 
   return (
-    <div className="space-y-4">
-      <div>
-        <p className="mb-1.5 text-xs font-medium text-zinc-500">相对项目路径</p>
-        <pre className="overflow-hidden whitespace-pre-wrap break-words rounded-md border border-zinc-200 bg-zinc-50 p-3 font-mono text-xs leading-5 text-zinc-800">
-          {createResult.relativeProjectPath ?? createResult.projectPath ?? ""}
-        </pre>
-      </div>
-      <div>
-        <p className="mb-1.5 text-xs font-medium text-zinc-500">后续命令</p>
-        <pre className="min-h-24 overflow-auto whitespace-pre-wrap break-words rounded-md border border-zinc-800 bg-zinc-950 p-3 font-mono text-xs leading-5 text-zinc-100">
-          {(createResult.nextCommands ?? []).join("\n")}
-        </pre>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-zinc-950/35 px-4 py-6">
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="create-project-dialog-title"
+        className="w-full max-w-xl overflow-hidden rounded-lg border border-zinc-200 bg-white shadow-2xl"
+      >
+        <div className="flex items-center justify-between gap-3 border-b border-zinc-200 px-4 py-3">
+          <div className="min-w-0">
+            <h2 id="create-project-dialog-title" className="text-sm font-semibold text-zinc-950">
+              生成项目
+            </h2>
+            <p className="mt-1 text-xs text-zinc-500">把当前配置导出为可独立运行的 Next.js Agent 项目</p>
+          </div>
+          <IconButton label="关闭生成项目窗口" onClick={onClose} disabled={isCreating}>
+            <X className="h-4 w-4" aria-hidden="true" />
+          </IconButton>
+        </div>
+
+        <div className="space-y-4 p-4">
+          {isCreating ? (
+            <div className="rounded-md border border-indigo-200 bg-indigo-50 p-4 text-sm leading-6 text-indigo-800">
+              <div className="mb-2 flex items-center gap-2 font-semibold">
+                <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
+                正在生成项目
+              </div>
+              正在复制模板、写入配置、生成工具和 README。
+            </div>
+          ) : null}
+
+          {!isCreating && createError ? (
+            <div className="rounded-md border border-red-200 bg-red-50 p-4 text-sm leading-6 text-red-800">
+              <div className="mb-2 flex items-center gap-2 font-semibold">
+                <AlertCircle className="h-4 w-4" aria-hidden="true" />
+                生成失败
+              </div>
+              {createError}
+            </div>
+          ) : null}
+
+          {!isCreating && createResult ? (
+            <div className="space-y-4">
+              <div className="rounded-md border border-emerald-200 bg-emerald-50 p-4 text-sm leading-6 text-emerald-800">
+                <div className="mb-2 flex items-center gap-2 font-semibold">
+                  <CheckCircle2 className="h-4 w-4" aria-hidden="true" />
+                  项目已生成
+                </div>
+                可以进入生成目录安装依赖并启动项目。
+              </div>
+              <div>
+                <p className="mb-1.5 text-xs font-medium text-zinc-500">项目路径</p>
+                <pre className="overflow-hidden whitespace-pre-wrap break-words rounded-md border border-zinc-200 bg-zinc-50 p-3 font-mono text-xs leading-5 text-zinc-800">
+                  {createResult.relativeProjectPath ?? createResult.projectPath ?? ""}
+                </pre>
+              </div>
+              <div>
+                <p className="mb-1.5 text-xs font-medium text-zinc-500">运行命令</p>
+                <pre className="min-h-24 overflow-auto whitespace-pre-wrap break-words rounded-md border border-zinc-800 bg-zinc-950 p-3 font-mono text-xs leading-5 text-zinc-100">
+                  {(createResult.nextCommands ?? []).join("\n")}
+                </pre>
+              </div>
+            </div>
+          ) : null}
+        </div>
+
+        <div className="flex justify-end gap-2 border-t border-zinc-200 bg-zinc-50 px-4 py-3">
+          <button
+            type="button"
+            onClick={onClose}
+            disabled={isCreating}
+            className="inline-flex h-9 items-center justify-center rounded-md border border-zinc-200 bg-white px-3 text-sm font-medium text-zinc-700 transition hover:bg-zinc-50 disabled:cursor-not-allowed disabled:text-zinc-400"
+          >
+            关闭
+          </button>
+        </div>
       </div>
     </div>
   );
@@ -773,7 +791,7 @@ export default function BuilderPage() {
   const [isCreating, setIsCreating] = useState(false);
   const [createError, setCreateError] = useState("");
   const [createResult, setCreateResult] = useState<CreateResult | null>(null);
-  const [activeTab, setActiveTab] = useState<"answer" | "project">("answer");
+  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [isConfigCollapsed, setIsConfigCollapsed] = useState(false);
   const [isTraceCollapsed, setIsTraceCollapsed] = useState(false);
 
@@ -804,7 +822,6 @@ export default function BuilderPage() {
     setIsRunning(true);
     setRunError("");
     setRunResult(null);
-    setActiveTab("answer");
     try {
       const response = await fetch("/api/agent/run", {
         method: "POST",
@@ -822,10 +839,10 @@ export default function BuilderPage() {
   }
 
   async function createProject() {
+    setIsCreateDialogOpen(true);
     setIsCreating(true);
     setCreateError("");
     setCreateResult(null);
-    setActiveTab("project");
     try {
       const { apiKey: _apiKey, userInput: _userInput, ...projectConfig } = state;
       void _apiKey;
@@ -861,7 +878,7 @@ export default function BuilderPage() {
             </div>
           </div>
 
-          <div className="flex min-w-0 flex-1 flex-wrap items-center justify-start gap-2 lg:justify-center">
+          <div className="hidden min-w-0 flex-1 flex-wrap items-center justify-start gap-2 sm:flex lg:justify-center">
             <StatusPill tone={runStatus}>
               {isRunning ? "运行中" : runError ? "运行失败" : runResult ? "已完成" : "待运行"}
             </StatusPill>
@@ -921,14 +938,7 @@ export default function BuilderPage() {
 
         <div className="min-w-0 space-y-3">
           <PromptEditor state={state} isRunning={isRunning} onFieldChange={updateField} onRunAgent={runAgent} />
-          <ObservationWorkspace
-            runResult={runResult}
-            runError={runError}
-            createResult={createResult}
-            createError={createError}
-            activeTab={activeTab}
-            onChangeTab={setActiveTab}
-          />
+          <ObservationWorkspace runResult={runResult} runError={runError} />
         </div>
 
         <TraceSidebar
@@ -938,6 +948,13 @@ export default function BuilderPage() {
           onToggleCollapse={() => setIsTraceCollapsed((current) => !current)}
         />
       </div>
+      <CreateProjectDialog
+        isOpen={isCreateDialogOpen}
+        isCreating={isCreating}
+        createResult={createResult}
+        createError={createError}
+        onClose={() => setIsCreateDialogOpen(false)}
+      />
     </main>
   );
 }
