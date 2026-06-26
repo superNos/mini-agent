@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import type { CSSProperties, PointerEvent as ReactPointerEvent } from "react";
 import { groupTraceSteps } from "@/agent/trace-groups";
 import type { TraceCardGroup } from "@/agent/trace-groups";
 import type { AgentMessage } from "@/agent/model";
@@ -62,6 +63,7 @@ const DEFAULT_STATE: BuilderState = {
 type SkillOptionId = BuilderState["selectedSkills"][number];
 type TraceNodeType = TraceCardGroup["type"];
 type TraceFilter = "all" | TraceNodeType;
+type ResizablePanel = "config" | "trace";
 
 type SkillOption = {
   id: SkillId;
@@ -143,6 +145,14 @@ const TRACE_FILTERS: Array<{ id: TraceFilter; label: string }> = [
   { id: "error", label: "错误" },
 ];
 
+const COLLAPSED_PANEL_WIDTH = 56;
+const DEFAULT_CONFIG_WIDTH = 320;
+const DEFAULT_TRACE_WIDTH = 390;
+const MIN_CONFIG_WIDTH = 280;
+const MAX_CONFIG_WIDTH = 560;
+const MIN_TRACE_WIDTH = 320;
+const MAX_TRACE_WIDTH = 680;
+
 const JSON_VIEW_STYLES = {
   container: "text-xs leading-5 text-zinc-800",
   childFieldsContainer: "m-0 list-none border-l border-zinc-200 pl-3",
@@ -192,6 +202,38 @@ function fieldId(name: keyof BuilderState) {
 
 function classNames(...values: Array<string | false | null | undefined>) {
   return values.filter(Boolean).join(" ");
+}
+
+function clampWidth(value: number, min: number, max: number) {
+  return Math.min(Math.max(value, min), max);
+}
+
+function ResizeHandle({
+  side,
+  label,
+  testId,
+  onPointerDown,
+}: {
+  side: "left" | "right";
+  label: string;
+  testId: string;
+  onPointerDown: (event: ReactPointerEvent<HTMLButtonElement>) => void;
+}) {
+  return (
+    <button
+      type="button"
+      data-testid={testId}
+      aria-label={label}
+      title={label}
+      onPointerDown={onPointerDown}
+      className={classNames(
+        "group absolute bottom-3 top-14 z-10 hidden w-4 cursor-col-resize items-stretch justify-center rounded-md outline-none lg:flex",
+        side === "right" ? "-right-3" : "-left-3",
+      )}
+    >
+      <span className="my-2 w-1 rounded-full bg-zinc-200 transition group-hover:bg-indigo-400 group-focus-visible:bg-indigo-400" />
+    </button>
+  );
 }
 
 function getTraceSummary(trace: TraceStep[] | undefined) {
@@ -1260,6 +1302,9 @@ export default function BuilderPage() {
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [isConfigCollapsed, setIsConfigCollapsed] = useState(false);
   const [isTraceCollapsed, setIsTraceCollapsed] = useState(false);
+  const [configWidth, setConfigWidth] = useState(DEFAULT_CONFIG_WIDTH);
+  const [traceWidth, setTraceWidth] = useState(DEFAULT_TRACE_WIDTH);
+  const [resizingPanel, setResizingPanel] = useState<ResizablePanel | null>(null);
 
   const traceSummary = getTraceSummary(runResult?.trace);
   const runStatus = runError
@@ -1415,6 +1460,47 @@ export default function BuilderPage() {
     }
   }
 
+  function startResize(panel: ResizablePanel, event: ReactPointerEvent<HTMLButtonElement>) {
+    if (event.button !== 0) return;
+
+    event.preventDefault();
+    const startX = event.clientX;
+    const startWidth = panel === "config" ? configWidth : traceWidth;
+    const previousCursor = document.body.style.cursor;
+    const previousUserSelect = document.body.style.userSelect;
+
+    setResizingPanel(panel);
+    document.body.style.cursor = "col-resize";
+    document.body.style.userSelect = "none";
+
+    const controller = new AbortController();
+    const resize = (pointerEvent: PointerEvent) => {
+      const delta = pointerEvent.clientX - startX;
+      if (panel === "config") {
+        setConfigWidth(clampWidth(startWidth + delta, MIN_CONFIG_WIDTH, MAX_CONFIG_WIDTH));
+        return;
+      }
+      setTraceWidth(clampWidth(startWidth - delta, MIN_TRACE_WIDTH, MAX_TRACE_WIDTH));
+    };
+    const stop = () => {
+      setResizingPanel(null);
+      document.body.style.cursor = previousCursor;
+      document.body.style.userSelect = previousUserSelect;
+      controller.abort();
+    };
+
+    window.addEventListener("pointermove", resize, { signal: controller.signal });
+    window.addEventListener("pointerup", stop, { once: true, signal: controller.signal });
+    window.addEventListener("pointercancel", stop, { once: true, signal: controller.signal });
+  }
+
+  const layoutColumns = [
+    isConfigCollapsed ? `${COLLAPSED_PANEL_WIDTH}px` : `${configWidth}px`,
+    "minmax(0,1fr)",
+    isTraceCollapsed ? `${COLLAPSED_PANEL_WIDTH}px` : `${traceWidth}px`,
+  ].join(" ");
+  const layoutStyle = { "--builder-layout-columns": layoutColumns } as CSSProperties;
+
   return (
     <main className="min-h-screen bg-[#f6f7f9] text-zinc-950">
       <header className="sticky top-0 z-20 border-b border-zinc-200 bg-white/95 backdrop-blur">
@@ -1470,39 +1556,55 @@ export default function BuilderPage() {
       </header>
 
       <div
+        data-testid="builder-layout"
         className={classNames(
-          "grid gap-3 p-3 transition-[grid-template-columns] duration-200 lg:p-4",
-          isConfigCollapsed && isTraceCollapsed
-            ? "lg:grid-cols-[56px_minmax(0,1fr)_56px]"
-            : isConfigCollapsed
-              ? "lg:grid-cols-[56px_minmax(0,1fr)_390px]"
-              : isTraceCollapsed
-                ? "lg:grid-cols-[320px_minmax(0,1fr)_56px]"
-                : "lg:grid-cols-[320px_minmax(0,1fr)_390px]",
+          "grid grid-cols-1 gap-3 p-3 lg:grid-cols-[var(--builder-layout-columns)] lg:p-4",
+          resizingPanel ? "select-none" : "transition-[grid-template-columns] duration-200",
         )}
+        style={layoutStyle}
       >
-        <ConfigSidebar
-          state={state}
-          skills={skills}
-          skillsError={skillsError}
-          isCollapsed={isConfigCollapsed}
-          onToggleCollapse={() => setIsConfigCollapsed((current) => !current)}
-          onFieldChange={updateField}
-          onToggleTool={toggleTool}
-          onToggleSkill={toggleSkill}
-        />
+        <div className="relative min-w-0">
+          <ConfigSidebar
+            state={state}
+            skills={skills}
+            skillsError={skillsError}
+            isCollapsed={isConfigCollapsed}
+            onToggleCollapse={() => setIsConfigCollapsed((current) => !current)}
+            onFieldChange={updateField}
+            onToggleTool={toggleTool}
+            onToggleSkill={toggleSkill}
+          />
+          {!isConfigCollapsed ? (
+            <ResizeHandle
+              side="right"
+              label="调整配置栏宽度"
+              testId="config-resize-handle"
+              onPointerDown={(event) => startResize("config", event)}
+            />
+          ) : null}
+        </div>
 
         <div className="min-w-0 space-y-3">
           <PromptEditor state={state} isRunning={isRunning} onFieldChange={updateField} onRunAgent={runAgent} />
           <ObservationWorkspace runResult={runResult} runError={runError} />
         </div>
 
-        <TraceSidebar
-          trace={runResult?.trace}
-          isCollapsed={isTraceCollapsed}
-          isRunning={isRunning}
-          onToggleCollapse={() => setIsTraceCollapsed((current) => !current)}
-        />
+        <div className="relative min-w-0">
+          <TraceSidebar
+            trace={runResult?.trace}
+            isCollapsed={isTraceCollapsed}
+            isRunning={isRunning}
+            onToggleCollapse={() => setIsTraceCollapsed((current) => !current)}
+          />
+          {!isTraceCollapsed ? (
+            <ResizeHandle
+              side="left"
+              label="调整轨迹栏宽度"
+              testId="trace-resize-handle"
+              onPointerDown={(event) => startResize("trace", event)}
+            />
+          ) : null}
+        </div>
       </div>
       <CreateProjectDialog
         isOpen={isCreateDialogOpen}
