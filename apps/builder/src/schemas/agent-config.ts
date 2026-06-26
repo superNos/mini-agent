@@ -5,6 +5,8 @@ export const toolIdSchema = z.enum([
   "current-time",
   "city-distance",
   "transport-estimate",
+  "weather-forecast",
+  "attraction-search",
   "hotel-price",
   "budget-check",
 ]);

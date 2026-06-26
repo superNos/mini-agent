@@ -1,11 +1,13 @@
 import type { AnyTool } from "@/agent/tool";
 import type { ToolId } from "@/schemas/agent-config";
+import { attractionSearchTool } from "@/tools/attraction-search";
 import { budgetCheckTool } from "@/tools/budget-check";
 import { calculatorTool } from "@/tools/calculator";
 import { cityDistanceTool } from "@/tools/city-distance";
 import { currentTimeTool } from "@/tools/current-time";
 import { hotelPriceTool } from "@/tools/hotel-price";
 import { transportEstimateTool } from "@/tools/transport-estimate";
+import { weatherForecastTool } from "@/tools/weather-forecast";
 import type { Skill } from "@/agent/skill";
 
 export type ToolMetadata = {
@@ -19,6 +21,8 @@ export const toolRegistry: Record<ToolId, AnyTool> = {
   "current-time": currentTimeTool,
   "city-distance": cityDistanceTool,
   "transport-estimate": transportEstimateTool,
+  "weather-forecast": weatherForecastTool,
+  "attraction-search": attractionSearchTool,
   "hotel-price": hotelPriceTool,
   "budget-check": budgetCheckTool,
 };
@@ -43,6 +47,16 @@ export const toolMetadata: ToolMetadata[] = [
     id: "transport-estimate",
     name: "交通估算",
     description: transportEstimateTool.description,
+  },
+  {
+    id: "weather-forecast",
+    name: "天气预报",
+    description: weatherForecastTool.description,
+  },
+  {
+    id: "attraction-search",
+    name: "景点搜索",
+    description: attractionSearchTool.description,
   },
   {
     id: "hotel-price",

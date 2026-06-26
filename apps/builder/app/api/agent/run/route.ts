@@ -44,7 +44,7 @@ export async function POST(request: Request) {
           skills,
           systemPrompt: parsed.data.systemPrompt,
           userInput: parsed.data.userInput,
-          maxSteps: 6,
+          maxSteps: 8,
           onTraceStep: (step) => send({ type: "trace", step }),
         });
         send({ type: "final", answer: result.answer, trace: result.trace });

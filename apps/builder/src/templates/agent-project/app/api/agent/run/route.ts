@@ -27,7 +27,7 @@ export async function POST(request: Request) {
     tools: getSelectedTools(AGENT_CONFIG.selectedToolIds),
     systemPrompt: AGENT_CONFIG.systemPrompt,
     userInput: input,
-    maxSteps: 6,
+    maxSteps: 8,
   });
 
   return NextResponse.json(result);

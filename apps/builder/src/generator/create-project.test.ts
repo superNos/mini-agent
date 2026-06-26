@@ -28,6 +28,14 @@ async function createBuilderFixture() {
     path.join(builderRoot, "src", "tools", "transport-estimate.ts"),
     "export const transportEstimateTool = {};",
   );
+  await writeFile(
+    path.join(builderRoot, "src", "tools", "weather-forecast.ts"),
+    "export const weatherForecastTool = {};",
+  );
+  await writeFile(
+    path.join(builderRoot, "src", "tools", "attraction-search.ts"),
+    "export const attractionSearchTool = {};",
+  );
   await writeFile(path.join(builderRoot, "src", "tools", "hotel-price.ts"), "export const hotelPriceTool = {};");
   await writeFile(path.join(builderRoot, "src", "tools", "budget-check.ts"), "export const budgetCheckTool = {};");
   await mkdir(path.join(builderRoot, "src", "skills"), { recursive: true });
@@ -249,12 +257,16 @@ describe("createProject", () => {
       await expect(stat(path.join(result.projectPath, "src", "skills", "travel-planner.ts"))).resolves.toBeTruthy();
       await expect(stat(path.join(result.projectPath, "src", "tools", "city-distance.ts"))).resolves.toBeTruthy();
       await expect(stat(path.join(result.projectPath, "src", "tools", "transport-estimate.ts"))).resolves.toBeTruthy();
+      await expect(stat(path.join(result.projectPath, "src", "tools", "weather-forecast.ts"))).resolves.toBeTruthy();
+      await expect(stat(path.join(result.projectPath, "src", "tools", "attraction-search.ts"))).resolves.toBeTruthy();
       await expect(stat(path.join(result.projectPath, "src", "tools", "hotel-price.ts"))).resolves.toBeTruthy();
       await expect(stat(path.join(result.projectPath, "src", "tools", "budget-check.ts"))).resolves.toBeTruthy();
 
       const toolsIndex = await readFile(path.join(result.projectPath, "src", "tools", "index.ts"), "utf8");
       expect(toolsIndex).toContain('import { cityDistanceTool } from "./city-distance";');
       expect(toolsIndex).toContain('import { transportEstimateTool } from "./transport-estimate";');
+      expect(toolsIndex).toContain('import { weatherForecastTool } from "./weather-forecast";');
+      expect(toolsIndex).toContain('import { attractionSearchTool } from "./attraction-search";');
       expect(toolsIndex).toContain('import { hotelPriceTool } from "./hotel-price";');
       expect(toolsIndex).toContain('import { budgetCheckTool } from "./budget-check";');
 
@@ -266,6 +278,8 @@ describe("createProject", () => {
       expect(config).toContain('"selectedSkillIds": [\n    "travel-planner"\n  ]');
       expect(config).toContain('"city-distance"');
       expect(config).toContain('"transport-estimate"');
+      expect(config).toContain('"weather-forecast"');
+      expect(config).toContain('"attraction-search"');
       expect(config).toContain('"hotel-price"');
       expect(config).toContain('"budget-check"');
     } finally {

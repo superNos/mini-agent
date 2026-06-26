@@ -5,6 +5,8 @@ const exportNames: Record<ToolId, string> = {
   "current-time": "currentTimeTool",
   "city-distance": "cityDistanceTool",
   "transport-estimate": "transportEstimateTool",
+  "weather-forecast": "weatherForecastTool",
+  "attraction-search": "attractionSearchTool",
   "hotel-price": "hotelPriceTool",
   "budget-check": "budgetCheckTool",
 };

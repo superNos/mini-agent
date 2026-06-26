@@ -8,7 +8,7 @@
 
 - OpenAI 兼容模型配置
 - 系统提示词编辑器
-- `calculator`、`current-time` 和旅行计划演示工具
+- `calculator`、`current-time`、旅行估算工具和免费接口旅行工具
 - `arithmetic-check`、`time-awareness` 和 `travel-planner` 内核技能
 - 页面试跑智能体
 - 协议化 Agent Loop
@@ -18,6 +18,7 @@
 暂不包含：
 
 - 网页搜索
+- 高德地图 API
 - 智能体预设市场
 - 内置角色型技能
 - 检索增强生成
@@ -52,3 +53,10 @@ generated/<project-slug>/
 - 协议：模型必须返回 `tool` 或 `final` JSON action。
 - 循环：模型调用、协议解析、工具执行、观察结果入队、继续循环。
 - 执行轨迹：每一步模型输入输出、协议解析、工具输入输出、观察结果、最终答案或错误的可视化记录。
+
+## 免费接口旅行工具
+
+- `weather-forecast`：调用 Open-Meteo 免费接口，免 API Key，用于查询目的地天气。
+- `attraction-search`：调用 OpenTripMap 免费档，需要申请 `OPENTRIPMAP_API_KEY`。未配置 Key 时工具会返回配置提示，不会中断 Agent Loop。
+
+项目不接入高德地图 API。路线、交通和住宿仍保留本地估算工具，避免学习内核依赖商业地图服务。

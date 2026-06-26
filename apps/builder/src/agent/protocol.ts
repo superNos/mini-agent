@@ -31,6 +31,10 @@ function toolInputExample(toolName: string) {
   if (toolName === "transport-estimate") {
     return '{"origin":"杭州","destination":"苏州","travelers":2}';
   }
+  if (toolName === "weather-forecast") return '{"city":"苏州","forecastDays":3}';
+  if (toolName === "attraction-search") {
+    return '{"city":"苏州","radiusMeters":8000,"limit":6,"language":"zh"}';
+  }
   if (toolName === "hotel-price") {
     return '{"city":"苏州","nights":1,"travelers":2,"level":"comfort"}';
   }
