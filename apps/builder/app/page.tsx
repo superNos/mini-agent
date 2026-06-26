@@ -60,7 +60,8 @@ const DEFAULT_STATE: BuilderState = {
 };
 
 type SkillOptionId = BuilderState["selectedSkills"][number];
-type TraceFilter = "all" | TraceStep["type"];
+type TraceNodeType = TraceCardGroup["type"];
+type TraceFilter = "all" | TraceNodeType;
 
 type SkillOption = {
   id: SkillId;
@@ -136,11 +137,9 @@ const TOOL_OPTIONS: Array<{
 
 const TRACE_FILTERS: Array<{ id: TraceFilter; label: string }> = [
   { id: "all", label: "全部" },
+  { id: "skill", label: "技能" },
   { id: "model", label: "模型" },
-  { id: "action", label: "协议" },
   { id: "tool", label: "工具" },
-  { id: "observation", label: "观察" },
-  { id: "final", label: "最终" },
   { id: "error", label: "错误" },
 ];
 
@@ -199,16 +198,15 @@ function getTraceSummary(trace: TraceStep[] | undefined) {
   const steps = groupTraceSteps(trace ?? []);
   return {
     total: steps.length,
+    skill: steps.filter((step) => step.type === "skill").length,
     model: steps.filter((step) => step.type === "model").length,
-    action: steps.filter((step) => step.type === "action").length,
     tool: steps.filter((step) => step.type === "tool").length,
-    observation: steps.filter((step) => step.type === "observation").length,
     error: steps.filter((step) => step.type === "error").length,
-    final: steps.filter((step) => step.type === "final").length,
   };
 }
 
 function stepTitle(step: TraceStep) {
+  if (step.type === "skill") return `读取技能 · ${step.skills.length} 个`;
   if (step.type === "tool") return `${step.phase === "started" ? "开始调用工具" : "工具调用完成"} · ${step.toolName}`;
   if (step.type === "model") return step.phase === "started" ? "开始调用模型" : "模型调用完成";
   if (step.type === "action") return "协议解析完成";
@@ -219,6 +217,7 @@ function stepTitle(step: TraceStep) {
 
 function traceGroupTitle(group: TraceCardGroup) {
   const step = group.primary;
+  if (group.type === "skill") return stepTitle(step);
   if (group.type === "model") return group.completed ? "模型调用完成" : "开始调用模型";
   if (group.type === "tool" && step.type === "tool") {
     return `${group.completed ? "工具调用完成" : "开始调用工具"} · ${step.toolName}`;
@@ -226,20 +225,16 @@ function traceGroupTitle(group: TraceCardGroup) {
   return stepTitle(step);
 }
 
-function stepBadgeClass(type: TraceStep["type"]) {
+function stepBadgeClass(type: TraceNodeType) {
+  if (type === "skill") return "border-violet-200 bg-violet-50 text-violet-700";
   if (type === "tool") return "border-blue-200 bg-blue-50 text-blue-700";
-  if (type === "action") return "border-amber-200 bg-amber-50 text-amber-700";
-  if (type === "observation") return "border-cyan-200 bg-cyan-50 text-cyan-700";
-  if (type === "final") return "border-emerald-200 bg-emerald-50 text-emerald-700";
   if (type === "error") return "border-red-200 bg-red-50 text-red-700";
   return "border-indigo-200 bg-indigo-50 text-indigo-700";
 }
 
-function stepIconClass(type: TraceStep["type"]) {
+function stepIconClass(type: TraceNodeType) {
+  if (type === "skill") return "border-violet-200 bg-violet-50 text-violet-700";
   if (type === "tool") return "border-blue-200 bg-blue-50 text-blue-700";
-  if (type === "action") return "border-amber-200 bg-amber-50 text-amber-700";
-  if (type === "observation") return "border-cyan-200 bg-cyan-50 text-cyan-700";
-  if (type === "final") return "border-emerald-200 bg-emerald-50 text-emerald-700";
   if (type === "error") return "border-red-200 bg-red-50 text-red-700";
   return "border-indigo-200 bg-indigo-50 text-indigo-700";
 }
@@ -853,6 +848,39 @@ function CreateProjectDialog({
 }
 
 function TraceDetails({ step }: { step: TraceStep }) {
+  if (step.type === "skill") {
+    return (
+      <div className="mt-3 space-y-3">
+        <div className="flex items-center justify-between gap-2">
+          <p className="text-xs font-medium text-zinc-500">已读取并挂载到 System Prompt</p>
+          <p className="text-xs text-zinc-400">{new Date(step.loadedAt).toLocaleTimeString()}</p>
+        </div>
+        <div className="space-y-2">
+          {step.skills.map((skill) => (
+            <div key={skill.id} className="rounded-md border border-zinc-200 bg-zinc-50 p-3">
+              <div className="flex flex-wrap items-center gap-2">
+                <p className="text-sm font-semibold text-zinc-950">{skill.name}</p>
+                <span className="rounded-md border border-zinc-200 bg-white px-1.5 py-0.5 text-[11px] font-medium text-zinc-500">
+                  {skill.id}
+                </span>
+              </div>
+              <p className="mt-1 text-xs leading-5 text-zinc-500">{skill.description}</p>
+              {skill.toolIds?.length ? (
+                <p className="mt-2 text-xs text-zinc-500">
+                  依赖工具：{skill.toolIds.join("、")}
+                </p>
+              ) : null}
+              <div className="mt-2">
+                <p className="mb-1.5 text-xs font-medium text-zinc-500">技能内容</p>
+                <RawCodeBlock>{skill.content}</RawCodeBlock>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
   if (step.type === "model") {
     return (
       <div className="mt-3 space-y-3">
@@ -999,6 +1027,12 @@ function TraceGroupDetails({ group }: { group: TraceCardGroup }) {
             <ModelOutputBlock modelOutput={completed.modelOutput} />
           </div>
         ) : null}
+        {group.action ? (
+          <div>
+            <p className="mb-1.5 text-xs font-medium text-zinc-500">协议解析（内部）</p>
+            <JsonTreeBlock value={group.action.action} />
+          </div>
+        ) : null}
       </div>
     );
   }
@@ -1027,6 +1061,12 @@ function TraceGroupDetails({ group }: { group: TraceCardGroup }) {
             <JsonTreeBlock value={completed.toolOutput} />
           </div>
         ) : null}
+        {group.observation ? (
+          <div>
+            <p className="mb-1.5 text-xs font-medium text-zinc-500">写回模型的 observation（内部）</p>
+            <RawCodeBlock>{group.observation.observation}</RawCodeBlock>
+          </div>
+        ) : null}
       </div>
     );
   }
@@ -1039,21 +1079,22 @@ function groupPhaseLabel(group: TraceCardGroup) {
   return group.primary.phase;
 }
 
+function groupStepLabel(group: TraceCardGroup) {
+  if (group.type === "skill") return "准备阶段";
+  return `第 ${group.step} 步`;
+}
+
 function TraceCard({ group, defaultOpen }: { group: TraceCardGroup; defaultOpen: boolean }) {
   const [isOpen, setIsOpen] = useState(defaultOpen);
   const isError = group.type === "error";
   const Icon =
     group.type === "tool"
       ? Wrench
-      : group.type === "action"
-        ? Settings2
-        : group.type === "observation"
-          ? Activity
-          : group.type === "final"
-            ? CheckCircle2
-            : isError
-              ? AlertCircle
-              : BrainCircuit;
+      : group.type === "skill"
+        ? Layers3
+        : isError
+          ? AlertCircle
+          : BrainCircuit;
 
   return (
     <article className="relative pl-8">
@@ -1075,7 +1116,7 @@ function TraceCard({ group, defaultOpen }: { group: TraceCardGroup; defaultOpen:
         >
           <span className="min-w-0">
             <span className="mb-1 flex flex-wrap items-center gap-2">
-              <span className="text-xs font-medium text-zinc-500">第 {group.step} 步</span>
+              <span className="text-xs font-medium text-zinc-500">{groupStepLabel(group)}</span>
               <span className={classNames("rounded-md border px-1.5 py-0.5 text-[11px] font-medium", stepBadgeClass(group.type))}>
                 {group.type}
               </span>
@@ -1188,7 +1229,7 @@ function TraceSidebar({
               <TraceCard
                 key={group.key}
                 group={group}
-                defaultOpen={group.type === "error" || group.type === "final" || index === filteredTrace.length - 1}
+                defaultOpen={group.type === "error" || index === filteredTrace.length - 1}
               />
             ))}
           </div>
@@ -1198,7 +1239,7 @@ function TraceSidebar({
           </div>
         ) : (
           <div className="rounded-md border border-dashed border-zinc-300 bg-zinc-50 px-4 py-8 text-sm leading-6 text-zinc-600">
-            运行 Agent 后会记录模型输出、工具调用和最终回答。
+            运行 Agent 后会记录读取技能、调用模型和调用工具。
           </div>
         )}
       </div>

@@ -164,7 +164,7 @@ describe("runAgent", () => {
   it("adds selected skill guidance to the system message", async () => {
     const model = fakeModel([JSON.stringify({ type: "final", answer: "done" })]);
 
-    await runAgent({
+    const result = await runAgent({
       model,
       tools: [],
       skills: [
@@ -189,6 +189,19 @@ describe("runAgent", () => {
     );
     expect(model.calls[0][0]?.content).toContain("演示技能");
     expect(model.calls[0][0]?.content).toContain("回答前先确认是否需要工具。");
+    expect(result.trace[0]).toEqual(
+      expect.objectContaining({
+        step: 0,
+        type: "skill",
+        phase: "loaded",
+        skills: [
+          expect.objectContaining({
+            id: "demo-skill",
+            name: "演示技能",
+          }),
+        ],
+      }),
+    );
   });
 
   it("returns error trace for invalid JSON", async () => {

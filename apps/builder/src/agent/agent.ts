@@ -72,13 +72,22 @@ async function appendTrace(
 export async function runAgent(input: RunAgentInput): Promise<RunAgentResult> {
   const maxSteps = input.maxSteps ?? 8;
   const trace: TraceStep[] = [];
+  const skills = input.skills ?? [];
   const messages: AgentMessage[] = [
     {
       role: "system",
-      content: buildAgentSystemPrompt(input.systemPrompt, input.tools, input.skills ?? []),
+      content: buildAgentSystemPrompt(input.systemPrompt, input.tools, skills),
     },
     { role: "user", content: input.userInput },
   ];
+
+  if (skills.length > 0) {
+    await appendTrace(
+      trace,
+      { step: 0, type: "skill", phase: "loaded", loadedAt: nowIso(), skills },
+      input.onTraceStep,
+    );
+  }
 
   for (let step = 1; step <= maxSteps; step += 1) {
     let modelOutput: string;

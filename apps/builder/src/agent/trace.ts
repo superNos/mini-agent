@@ -1,9 +1,24 @@
 import type { AgentMessage } from "./model";
 import type { ModelAction } from "./protocol";
+import type { Skill } from "./skill";
 
-export type TraceStepType = "model" | "action" | "tool" | "observation" | "final" | "error";
+export type TraceStepType =
+  | "skill"
+  | "model"
+  | "action"
+  | "tool"
+  | "observation"
+  | "final"
+  | "error";
 
 export type TraceStep =
+  | {
+      step: number;
+      type: "skill";
+      phase: "loaded";
+      loadedAt: string;
+      skills: Skill[];
+    }
   | {
       step: number;
       type: "model";
