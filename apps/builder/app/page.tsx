@@ -25,6 +25,7 @@ import {
   Wrench,
   X,
 } from "lucide-react";
+import { collapseAllNested, defaultStyles, JsonView } from "react-json-view-lite";
 
 type BuilderState = {
   projectName: string;
@@ -51,6 +52,7 @@ const DEFAULT_STATE: BuilderState = {
 };
 
 type ToolId = BuilderState["selectedTools"][number];
+type TraceFilter = "all" | TraceStep["type"];
 
 type RunResult = {
   answer?: string;
@@ -83,12 +85,32 @@ const TOOL_OPTIONS: Array<{
   },
 ];
 
+const TRACE_FILTERS: Array<{ id: TraceFilter; label: string }> = [
+  { id: "all", label: "全部" },
+  { id: "model", label: "模型" },
+  { id: "tool", label: "工具" },
+  { id: "final", label: "最终" },
+  { id: "error", label: "错误" },
+];
+
 function formatJson(value: unknown) {
   try {
     return JSON.stringify(value, null, 2) ?? String(value);
   } catch {
     return String(value);
   }
+}
+
+function parseJson(value: string) {
+  try {
+    return { ok: true as const, data: JSON.parse(value) as unknown };
+  } catch {
+    return { ok: false as const };
+  }
+}
+
+function isJsonContainer(value: unknown): value is Record<string, unknown> | unknown[] {
+  return typeof value === "object" && value !== null;
 }
 
 function fieldId(name: keyof BuilderState) {
@@ -129,6 +151,58 @@ function stepIconClass(type: TraceStep["type"]) {
   if (type === "final") return "border-emerald-200 bg-emerald-50 text-emerald-700";
   if (type === "error") return "border-red-200 bg-red-50 text-red-700";
   return "border-indigo-200 bg-indigo-50 text-indigo-700";
+}
+
+function getTraceFilterCount(trace: TraceStep[] | undefined, filter: TraceFilter) {
+  const steps = trace ?? [];
+  if (filter === "all") return steps.length;
+  return steps.filter((step) => step.type === filter).length;
+}
+
+function RawCodeBlock({
+  children,
+  tone = "light",
+}: {
+  children: React.ReactNode;
+  tone?: "light" | "dark" | "danger";
+}) {
+  return (
+    <pre
+      className={classNames(
+        "max-h-72 overflow-auto whitespace-pre-wrap rounded-md border p-3 font-mono text-xs leading-5",
+        tone === "dark" && "border-zinc-800 bg-zinc-950 text-zinc-100",
+        tone === "light" && "border-zinc-200 bg-white text-zinc-800",
+        tone === "danger" && "border-red-200 bg-red-50 text-red-800",
+      )}
+    >
+      {children}
+    </pre>
+  );
+}
+
+function JsonTreeBlock({ value }: { value: unknown }) {
+  if (!isJsonContainer(value)) {
+    return <RawCodeBlock>{formatJson(value)}</RawCodeBlock>;
+  }
+
+  return (
+    <div className="max-h-72 overflow-auto rounded-md border border-zinc-200 bg-white p-3 font-mono text-xs leading-5 text-zinc-800">
+      <JsonView
+        data={value}
+        shouldExpandNode={collapseAllNested}
+        style={defaultStyles}
+        clickToExpandNode
+        compactTopLevel
+      />
+    </div>
+  );
+}
+
+function ModelOutputBlock({ modelOutput }: { modelOutput: string }) {
+  const parsed = parseJson(modelOutput);
+  if (parsed.ok) return <JsonTreeBlock value={parsed.data} />;
+
+  return <RawCodeBlock tone="dark">{modelOutput}</RawCodeBlock>;
 }
 
 function StatusPill({
@@ -589,11 +663,7 @@ function CreateProjectDialog({
 
 function TraceDetails({ step }: { step: TraceStep }) {
   if (step.type === "model") {
-    return (
-      <pre className="mt-3 max-h-72 overflow-auto rounded-md border border-zinc-800 bg-zinc-950 p-3 font-mono text-xs leading-5 text-zinc-100">
-        {step.modelOutput}
-      </pre>
-    );
+    return <div className="mt-3"><ModelOutputBlock modelOutput={step.modelOutput} /></div>;
   }
 
   if (step.type === "tool") {
@@ -601,15 +671,11 @@ function TraceDetails({ step }: { step: TraceStep }) {
       <div className="mt-3 space-y-3">
         <div>
           <p className="mb-1.5 text-xs font-medium text-zinc-500">输入</p>
-          <pre className="max-h-56 overflow-auto rounded-md border border-zinc-200 bg-white p-3 font-mono text-xs leading-5 text-zinc-800">
-            {formatJson(step.toolInput)}
-          </pre>
+          <JsonTreeBlock value={step.toolInput} />
         </div>
         <div>
           <p className="mb-1.5 text-xs font-medium text-zinc-500">输出</p>
-          <pre className="max-h-56 overflow-auto rounded-md border border-zinc-200 bg-white p-3 font-mono text-xs leading-5 text-zinc-800">
-            {formatJson(step.toolOutput)}
-          </pre>
+          <JsonTreeBlock value={step.toolOutput} />
         </div>
       </div>
     );
@@ -617,39 +683,31 @@ function TraceDetails({ step }: { step: TraceStep }) {
 
   if (step.type === "final") {
     return (
-      <pre className="mt-3 max-h-72 overflow-auto whitespace-pre-wrap rounded-md border border-zinc-200 bg-white p-3 text-xs leading-5 text-zinc-800">
-        {step.finalAnswer}
-      </pre>
+      <div className="mt-3">
+        <RawCodeBlock>{step.finalAnswer}</RawCodeBlock>
+      </div>
     );
   }
 
   return (
     <div className="mt-3 space-y-3">
-      <pre className="overflow-auto rounded-md border border-red-200 bg-red-50 p-3 text-xs leading-5 text-red-800">
-        {step.error}
-      </pre>
+      <RawCodeBlock tone="danger">{step.error}</RawCodeBlock>
       {step.modelOutput ? (
         <div>
           <p className="mb-1.5 text-xs font-medium text-red-700">模型输出</p>
-          <pre className="max-h-56 overflow-auto rounded-md border border-red-200 bg-white p-3 font-mono text-xs leading-5 text-zinc-800">
-            {step.modelOutput}
-          </pre>
+          <ModelOutputBlock modelOutput={step.modelOutput} />
         </div>
       ) : null}
       {step.toolName ? (
         <div>
           <p className="mb-1.5 text-xs font-medium text-red-700">工具</p>
-          <pre className="overflow-auto rounded-md border border-red-200 bg-white p-3 font-mono text-xs leading-5 text-zinc-800">
-            {step.toolName}
-          </pre>
+          <RawCodeBlock>{step.toolName}</RawCodeBlock>
         </div>
       ) : null}
       {step.toolInput !== undefined ? (
         <div>
           <p className="mb-1.5 text-xs font-medium text-red-700">工具输入</p>
-          <pre className="max-h-56 overflow-auto rounded-md border border-red-200 bg-white p-3 font-mono text-xs leading-5 text-zinc-800">
-            {formatJson(step.toolInput)}
-          </pre>
+          <JsonTreeBlock value={step.toolInput} />
         </div>
       ) : null}
     </div>
@@ -709,8 +767,11 @@ function TraceSidebar({
   isRunning: boolean;
   onToggleCollapse: () => void;
 }) {
+  const [activeFilter, setActiveFilter] = useState<TraceFilter>("all");
   const summary = getTraceSummary(trace);
   const hasError = summary.error > 0;
+  const filteredTrace =
+    activeFilter === "all" ? (trace ?? []) : (trace ?? []).filter((step) => step.type === activeFilter);
 
   if (isCollapsed) {
     return (
@@ -756,22 +817,44 @@ function TraceSidebar({
       </div>
 
       <div className="max-h-none overflow-auto p-4 lg:max-h-[calc(100vh-148px)]">
-        <div className="mb-4 flex flex-wrap gap-2">
-          <StatusPill tone={summary.total ? "active" : "neutral"}>{summary.total} steps</StatusPill>
-          <StatusPill>{summary.model} model</StatusPill>
-          <StatusPill>{summary.tool} tool</StatusPill>
-          {summary.error ? <StatusPill tone="danger">{summary.error} error</StatusPill> : <StatusPill>0 error</StatusPill>}
+        <div className="mb-4 flex flex-wrap gap-2" role="tablist" aria-label="轨迹过滤">
+          {TRACE_FILTERS.map((filter) => {
+            const count = getTraceFilterCount(trace, filter.id);
+            const isActive = activeFilter === filter.id;
+            const isDanger = filter.id === "error" && count > 0;
+            return (
+              <button
+                key={filter.id}
+                type="button"
+                role="tab"
+                aria-selected={isActive}
+                onClick={() => setActiveFilter(filter.id)}
+                className={classNames(
+                  "inline-flex shrink-0 items-center gap-1 whitespace-nowrap rounded-md border px-2 py-1 text-xs font-medium transition",
+                  isActive && !isDanger && "border-indigo-200 bg-indigo-50 text-indigo-700",
+                  isActive && isDanger && "border-red-200 bg-red-50 text-red-700",
+                  !isActive && "border-zinc-200 bg-zinc-50 text-zinc-600 hover:border-zinc-300 hover:bg-white hover:text-zinc-950",
+                )}
+              >
+                {count} {filter.label}
+              </button>
+            );
+          })}
         </div>
 
-        {trace?.length ? (
+        {filteredTrace.length ? (
           <div className="space-y-4">
-            {trace.map((step, index) => (
+            {filteredTrace.map((step, index) => (
               <TraceCard
                 key={`${index}-${step.step}-${step.type}`}
                 step={step}
-                defaultOpen={step.type === "error" || index === trace.length - 1}
+                defaultOpen={step.type === "error" || index === filteredTrace.length - 1}
               />
             ))}
+          </div>
+        ) : trace?.length ? (
+          <div className="rounded-md border border-dashed border-zinc-300 bg-zinc-50 px-4 py-8 text-sm leading-6 text-zinc-600">
+            当前过滤条件下没有轨迹。
           </div>
         ) : (
           <div className="rounded-md border border-dashed border-zinc-300 bg-zinc-50 px-4 py-8 text-sm leading-6 text-zinc-600">

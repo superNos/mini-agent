@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import "react-json-view-lite/dist/index.css";
 
 export const metadata: Metadata = {
   title: "mini-agent-builder",
