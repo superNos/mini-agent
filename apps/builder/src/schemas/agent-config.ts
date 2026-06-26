@@ -1,7 +1,14 @@
 import { z } from "zod";
 
-export const toolIdSchema = z.enum(["calculator", "current-time"]);
-export const skillIdSchema = z.enum(["arithmetic-check", "time-awareness"]);
+export const toolIdSchema = z.enum([
+  "calculator",
+  "current-time",
+  "city-distance",
+  "transport-estimate",
+  "hotel-price",
+  "budget-check",
+]);
+export const skillIdSchema = z.enum(["arithmetic-check", "time-awareness", "travel-planner"]);
 
 export const baseUrlSchema = z
   .string()

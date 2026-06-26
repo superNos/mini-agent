@@ -2,6 +2,7 @@ import type { Skill } from "@/agent/skill";
 import type { SkillId } from "@/schemas/agent-config";
 import { arithmeticCheckSkill } from "@/skills/arithmetic-check";
 import { timeAwarenessSkill } from "@/skills/time-awareness";
+import { travelPlannerSkill } from "@/skills/travel-planner";
 
 export type SkillMetadata = {
   id: SkillId;
@@ -14,6 +15,7 @@ export type SkillMetadata = {
 export const skillRegistry: Record<SkillId, Skill> = {
   "arithmetic-check": arithmeticCheckSkill,
   "time-awareness": timeAwarenessSkill,
+  "travel-planner": travelPlannerSkill,
 };
 
 export const skillMetadata: SkillMetadata[] = Object.values(skillRegistry).map((skill) => ({

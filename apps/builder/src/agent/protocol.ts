@@ -27,6 +27,16 @@ function errorMessage(error: unknown) {
 function toolInputExample(toolName: string) {
   if (toolName === "calculator") return '{"expression":"1 + 2"}';
   if (toolName === "current-time") return "{}";
+  if (toolName === "city-distance") return '{"origin":"杭州","destination":"苏州"}';
+  if (toolName === "transport-estimate") {
+    return '{"origin":"杭州","destination":"苏州","travelers":2}';
+  }
+  if (toolName === "hotel-price") {
+    return '{"city":"苏州","nights":1,"travelers":2,"level":"comfort"}';
+  }
+  if (toolName === "budget-check") {
+    return '{"budget":1500,"items":[{"name":"交通","amount":200},{"name":"住宿","amount":360}],"bufferRate":0.1}';
+  }
   return "Use a JSON object matching this tool's input schema.";
 }
 

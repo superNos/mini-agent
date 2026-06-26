@@ -3,6 +3,10 @@ import type { ToolId } from "@/schemas/agent-config";
 const exportNames: Record<ToolId, string> = {
   calculator: "calculatorTool",
   "current-time": "currentTimeTool",
+  "city-distance": "cityDistanceTool",
+  "transport-estimate": "transportEstimateTool",
+  "hotel-price": "hotelPriceTool",
+  "budget-check": "budgetCheckTool",
 };
 
 export function renderToolsIndex(selectedTools: ToolId[]) {

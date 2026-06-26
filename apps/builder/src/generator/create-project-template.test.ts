@@ -33,8 +33,8 @@ describe("createProject with real template", () => {
             baseUrl: "https://api.example.com/v1",
             model: "test-model",
             systemPrompt: "返回 JSON。",
-            selectedTools: ["calculator", "current-time"],
-            selectedSkills: [],
+            selectedTools: ["current-time"],
+            selectedSkills: ["travel-planner"],
           },
         });
 
@@ -44,10 +44,13 @@ describe("createProject with real template", () => {
         await expectPathExists(path.join(result.projectPath, "app", "api", "agent", "run", "route.ts"));
         await expectPathExists(path.join(result.projectPath, "src", "agent", "agent.ts"));
         await expectPathExists(path.join(result.projectPath, "src", "agent", "config.ts"));
-        await expectPathExists(path.join(result.projectPath, "src", "tools", "calculator.ts"));
         await expectPathExists(path.join(result.projectPath, "src", "tools", "current-time.ts"));
+        await expectPathExists(path.join(result.projectPath, "src", "tools", "city-distance.ts"));
+        await expectPathExists(path.join(result.projectPath, "src", "tools", "transport-estimate.ts"));
+        await expectPathExists(path.join(result.projectPath, "src", "tools", "hotel-price.ts"));
+        await expectPathExists(path.join(result.projectPath, "src", "tools", "budget-check.ts"));
         await expectPathExists(path.join(result.projectPath, "src", "tools", "index.ts"));
-        await expectPathExists(path.join(result.projectPath, "src", "skills"));
+        await expectPathExists(path.join(result.projectPath, "src", "skills", "travel-planner.ts"));
 
         const envExample = await readFile(path.join(result.projectPath, ".env.example"), "utf8");
         expect(envExample.trimEnd()).toBe("OPENAI_API_KEY=");
@@ -57,8 +60,12 @@ describe("createProject with real template", () => {
         expect(config).not.toContain("apiKey");
 
         const toolsIndex = await readFile(path.join(result.projectPath, "src", "tools", "index.ts"), "utf8");
-        expect(toolsIndex).toContain('import { calculatorTool } from "./calculator";');
         expect(toolsIndex).toContain('import { currentTimeTool } from "./current-time";');
+        expect(toolsIndex).toContain('import { cityDistanceTool } from "./city-distance";');
+        expect(toolsIndex).toContain('import { transportEstimateTool } from "./transport-estimate";');
+
+        const skillsIndex = await readFile(path.join(result.projectPath, "src", "skills", "index.ts"), "utf8");
+        expect(skillsIndex).toContain('import { travelPlannerSkill } from "./travel-planner";');
 
         const page = await readFile(path.join(result.projectPath, "app", "page.tsx"), "utf8");
         expect(page).toContain('aria-label="智能体输入"');

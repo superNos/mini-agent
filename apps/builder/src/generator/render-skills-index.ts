@@ -3,6 +3,7 @@ import type { SkillId } from "@/schemas/agent-config";
 const exportNames: Record<SkillId, string> = {
   "arithmetic-check": "arithmeticCheckSkill",
   "time-awareness": "timeAwarenessSkill",
+  "travel-planner": "travelPlannerSkill",
 };
 
 export function renderSkillsIndex(selectedSkills: SkillId[]) {

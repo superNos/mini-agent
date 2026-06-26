@@ -4,10 +4,12 @@ import { useState } from "react";
 import type { AgentMessage } from "@/agent/model";
 import type { TraceStep } from "@/agent/trace";
 import { skillMetadata } from "@/registry/skills";
-import type { SkillId } from "@/schemas/agent-config";
+import type { SkillId, ToolId } from "@/schemas/agent-config";
 import {
   Activity,
   AlertCircle,
+  BadgeDollarSign,
+  BedDouble,
   Bot,
   BrainCircuit,
   CheckCircle2,
@@ -19,15 +21,18 @@ import {
   LayoutPanelTop,
   Link2,
   Loader2,
+  MapPinned,
   PanelLeftClose,
   PanelLeftOpen,
   PanelRightClose,
   PanelRightOpen,
   Play,
   Settings2,
+  TrainFront,
   Wrench,
   X,
 } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
 import { collapseAllNested, JsonView } from "react-json-view-lite";
 
 type BuilderState = {
@@ -37,24 +42,23 @@ type BuilderState = {
   apiKey: string;
   model: string;
   systemPrompt: string;
-  selectedTools: Array<"calculator" | "current-time">;
+  selectedTools: ToolId[];
   selectedSkills: SkillId[];
   userInput: string;
 };
 
 const DEFAULT_STATE: BuilderState = {
-  projectName: "我的智能体",
-  projectSlug: "my-agent",
+  projectName: "周末旅行计划助手",
+  projectSlug: "travel-agent",
   baseUrl: "https://api.openai.com/v1",
   apiKey: "",
   model: "gpt-4.1-mini",
   systemPrompt: "你是一个小型智能体。请只返回符合协议的 JSON。",
-  selectedTools: ["calculator", "current-time"],
-  selectedSkills: [],
-  userInput: "12 * (3 + 4) 等于多少？",
+  selectedTools: ["city-distance", "transport-estimate", "hotel-price", "budget-check"],
+  selectedSkills: ["travel-planner"],
+  userInput: "我周末从杭州去苏州，两个人，预算 1500 元，帮我做一个 2 天 1 晚的旅行计划。",
 };
 
-type ToolId = BuilderState["selectedTools"][number];
 type SkillOptionId = BuilderState["selectedSkills"][number];
 type TraceFilter = "all" | TraceStep["type"];
 
@@ -88,7 +92,7 @@ const TOOL_OPTIONS: Array<{
   id: ToolId;
   label: string;
   description: string;
-  Icon: typeof Wrench;
+  Icon: LucideIcon;
 }> = [
   {
     id: "calculator",
@@ -101,6 +105,30 @@ const TOOL_OPTIONS: Array<{
     label: "当前时间",
     description: "返回当前运行时间",
     Icon: Clock3,
+  },
+  {
+    id: "city-distance",
+    label: "城市距离",
+    description: "估算两个城市之间的距离",
+    Icon: MapPinned,
+  },
+  {
+    id: "transport-estimate",
+    label: "交通估算",
+    description: "估算高铁、自驾和长途车成本",
+    Icon: TrainFront,
+  },
+  {
+    id: "hotel-price",
+    label: "住宿估算",
+    description: "估算城市住宿档位和费用",
+    Icon: BedDouble,
+  },
+  {
+    id: "budget-check",
+    label: "预算检查",
+    description: "汇总费用并判断预算是否充足",
+    Icon: BadgeDollarSign,
   },
 ];
 
