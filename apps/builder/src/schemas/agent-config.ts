@@ -7,7 +7,11 @@ export const toolIdSchema = z.enum([
   "budget-check",
   "itinerary-planner",
 ]);
-export const skillIdSchema = z.enum(["arithmetic-check", "time-awareness", "travel-planner"]);
+export const skillIdSchema = z
+  .string()
+  .min(1)
+  .max(64)
+  .regex(/^[a-z0-9][a-z0-9-]*$/);
 
 export const baseUrlSchema = z
   .string()

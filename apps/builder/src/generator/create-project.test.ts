@@ -33,17 +33,58 @@ async function createBuilderFixture() {
     "export const itineraryPlannerTool = {};",
   );
   await mkdir(path.join(builderRoot, "src", "skills"), { recursive: true });
+  await mkdir(path.join(builderRoot, "src", "skills", "arithmetic-check"), { recursive: true });
   await writeFile(
-    path.join(builderRoot, "src", "skills", "arithmetic-check.ts"),
-    "export const arithmeticCheckSkill = {};",
+    path.join(builderRoot, "src", "skills", "arithmetic-check", "SKILL.md"),
+    [
+      "---",
+      "id: arithmetic-check",
+      "name: 算术校验",
+      "description: 遇到算术表达式时使用计算器工具验证结果",
+      "tools:",
+      "  - calculator",
+      "---",
+      "",
+      "# 算术校验",
+      "",
+      "调用 calculator 工具验证结果。",
+    ].join("\n"),
   );
+  await mkdir(path.join(builderRoot, "src", "skills", "time-awareness"), { recursive: true });
   await writeFile(
-    path.join(builderRoot, "src", "skills", "time-awareness.ts"),
-    "export const timeAwarenessSkill = {};",
+    path.join(builderRoot, "src", "skills", "time-awareness", "SKILL.md"),
+    [
+      "---",
+      "id: time-awareness",
+      "name: 时间感知",
+      "description: 需要当前日期或运行时间时先读取时间工具",
+      "tools:",
+      "  - current-time",
+      "---",
+      "",
+      "# 时间感知",
+      "",
+      "调用 current-time 工具确认时间。",
+    ].join("\n"),
   );
+  await mkdir(path.join(builderRoot, "src", "skills", "travel-planner"), { recursive: true });
   await writeFile(
-    path.join(builderRoot, "src", "skills", "travel-planner.ts"),
-    "export const travelPlannerSkill = {};",
+    path.join(builderRoot, "src", "skills", "travel-planner", "SKILL.md"),
+    [
+      "---",
+      "id: travel-planner",
+      "name: 旅行计划",
+      "description: 把旅行需求拆成天气查询、预算评估和行程安排",
+      "tools:",
+      "  - weather-forecast",
+      "  - budget-check",
+      "  - itinerary-planner",
+      "---",
+      "",
+      "# 旅行计划",
+      "",
+      "先查天气，再评估预算，最后生成行程。",
+    ].join("\n"),
   );
 
   return {
@@ -216,10 +257,10 @@ describe("createProject", () => {
         },
       });
 
-      await expect(stat(path.join(result.projectPath, "src", "skills", "arithmetic-check.ts"))).resolves.toBeTruthy();
+      await expect(stat(path.join(result.projectPath, "src", "skills", "arithmetic-check", "SKILL.md"))).resolves.toBeTruthy();
       const skillsIndex = await readFile(path.join(result.projectPath, "src", "skills", "index.ts"), "utf8");
-      expect(skillsIndex).toContain('import { arithmeticCheckSkill } from "./arithmetic-check";');
-      expect(skillsIndex).toContain('"arithmetic-check": arithmeticCheckSkill');
+      expect(skillsIndex).toContain('"arithmetic-check": {');
+      expect(skillsIndex).toContain('"content":');
 
       await expect(stat(path.join(result.projectPath, "src", "tools", "calculator.ts"))).resolves.toBeTruthy();
       const config = await readFile(path.join(result.projectPath, "src", "agent", "config.ts"), "utf8");
@@ -248,7 +289,7 @@ describe("createProject", () => {
         },
       });
 
-      await expect(stat(path.join(result.projectPath, "src", "skills", "travel-planner.ts"))).resolves.toBeTruthy();
+      await expect(stat(path.join(result.projectPath, "src", "skills", "travel-planner", "SKILL.md"))).resolves.toBeTruthy();
       await expect(stat(path.join(result.projectPath, "src", "tools", "weather-forecast.ts"))).resolves.toBeTruthy();
       await expect(stat(path.join(result.projectPath, "src", "tools", "budget-check.ts"))).resolves.toBeTruthy();
       await expect(stat(path.join(result.projectPath, "src", "tools", "itinerary-planner.ts"))).resolves.toBeTruthy();
@@ -259,8 +300,8 @@ describe("createProject", () => {
       expect(toolsIndex).toContain('import { itineraryPlannerTool } from "./itinerary-planner";');
 
       const skillsIndex = await readFile(path.join(result.projectPath, "src", "skills", "index.ts"), "utf8");
-      expect(skillsIndex).toContain('import { travelPlannerSkill } from "./travel-planner";');
-      expect(skillsIndex).toContain('"travel-planner": travelPlannerSkill');
+      expect(skillsIndex).toContain('"travel-planner": {');
+      expect(skillsIndex).toContain('"content":');
 
       const config = await readFile(path.join(result.projectPath, "src", "agent", "config.ts"), "utf8");
       expect(config).toContain('"selectedSkillIds": [\n    "travel-planner"\n  ]');

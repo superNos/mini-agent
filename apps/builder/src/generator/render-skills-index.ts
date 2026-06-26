@@ -1,21 +1,11 @@
-import type { SkillId } from "@/schemas/agent-config";
+import type { Skill } from "@/agent/skill";
 
-const exportNames: Record<SkillId, string> = {
-  "arithmetic-check": "arithmeticCheckSkill",
-  "time-awareness": "timeAwarenessSkill",
-  "travel-planner": "travelPlannerSkill",
-};
-
-export function renderSkillsIndex(selectedSkills: SkillId[]) {
-  const imports = selectedSkills
-    .map((skillId) => `import { ${exportNames[skillId]} } from "./${skillId}";`)
-    .join("\n");
+export function renderSkillsIndex(selectedSkills: Skill[]) {
   const entries = selectedSkills
-    .map((skillId) => `  "${skillId}": ${exportNames[skillId]},`)
+    .map((skill) => `  ${JSON.stringify(skill.id)}: ${JSON.stringify(skill, null, 2)},`)
     .join("\n");
 
-  return `${imports}
-import type { Skill } from "../agent/skill";
+  return `import type { Skill } from "../agent/skill";
 
 const skills: Record<string, Skill> = {
 ${entries}

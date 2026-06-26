@@ -43,9 +43,12 @@ function buildSkillsSection(skills: Skill[]) {
   return [
     "Selected skills:",
     ...skills.map((skill) =>
-      [`- ${skill.name}: ${skill.description}`, `  Guidance: ${skill.systemPromptAddon}`].join(
-        "\n",
-      ),
+      [
+        `## ${skill.name}`,
+        `Description: ${skill.description}`,
+        "Instructions:",
+        skill.content,
+      ].join("\n"),
     ),
     "",
   ].join("\n");

@@ -40,12 +40,29 @@ OPENAI_API_KEY=
 
 ## 添加技能
 
-在 `src/skills/` 中新增文件，导出一个技能对象，并在 `src/skills/index.ts` 注册。技能用于追加系统提示词，也可以声明依赖工具：
+在 `src/skills/` 中新增一个目录，并放入 `SKILL.md`。技能用于追加完整的行为说明，也可以声明依赖工具：
 
-- `id`
-- `name`
-- `description`
-- `systemPromptAddon`
-- `toolIds`
+```text
+src/skills/my-skill/
+  SKILL.md
+```
+
+`SKILL.md` 的 frontmatter 示例：
+
+```md
+---
+id: my-skill
+name: 我的技能
+description: 说明这个技能什么时候使用
+tools:
+  - calculator
+---
+
+# 我的技能
+
+这里写完整的技能说明、使用条件、执行步骤和回答要求。
+```
+
+生成项目会把已选择技能解析进 `src/skills/index.ts`。如果你手动新增技能，也需要在 `src/skills/index.ts` 中注册解析后的技能对象。
 
 当前版本默认不内置业务预设市场、角色型技能或网页搜索。这个项目保留的是智能体内核、扩展结构和本次选择的学习示例。

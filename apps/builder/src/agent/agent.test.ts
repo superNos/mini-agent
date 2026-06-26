@@ -172,7 +172,7 @@ describe("runAgent", () => {
           id: "demo-skill",
           name: "演示技能",
           description: "追加一段系统提示词",
-          systemPromptAddon: "回答前先确认是否需要工具。",
+          content: "回答前先确认是否需要工具。",
           toolIds: [],
         },
       ],

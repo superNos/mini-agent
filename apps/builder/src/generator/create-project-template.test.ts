@@ -49,7 +49,7 @@ describe("createProject with real template", () => {
         await expectPathExists(path.join(result.projectPath, "src", "tools", "budget-check.ts"));
         await expectPathExists(path.join(result.projectPath, "src", "tools", "itinerary-planner.ts"));
         await expectPathExists(path.join(result.projectPath, "src", "tools", "index.ts"));
-        await expectPathExists(path.join(result.projectPath, "src", "skills", "travel-planner.ts"));
+        await expectPathExists(path.join(result.projectPath, "src", "skills", "travel-planner", "SKILL.md"));
 
         const envExample = await readFile(path.join(result.projectPath, ".env.example"), "utf8");
         expect(envExample.trimEnd()).toBe("OPENAI_API_KEY=");
@@ -65,7 +65,8 @@ describe("createProject with real template", () => {
         expect(toolsIndex).toContain('import { itineraryPlannerTool } from "./itinerary-planner";');
 
         const skillsIndex = await readFile(path.join(result.projectPath, "src", "skills", "index.ts"), "utf8");
-        expect(skillsIndex).toContain('import { travelPlannerSkill } from "./travel-planner";');
+        expect(skillsIndex).toContain('"travel-planner": {');
+        expect(skillsIndex).toContain('"content":');
 
         const page = await readFile(path.join(result.projectPath, "app", "page.tsx"), "utf8");
         expect(page).toContain('aria-label="智能体输入"');

@@ -54,6 +54,35 @@ generated/<project-slug>/
 - 循环：模型调用、协议解析、工具执行、观察结果入队、继续循环。
 - 执行轨迹：每一步模型输入输出、协议解析、工具输入输出、观察结果、最终答案或错误的可视化记录。
 
+## 技能包格式
+
+技能不是一段写死在代码里的描述，而是一个目录：
+
+```text
+src/skills/<skill-id>/
+  SKILL.md
+```
+
+`SKILL.md` 使用 frontmatter 描述元信息，正文写完整技能说明：
+
+```md
+---
+id: travel-planner
+name: 旅行计划
+description: 把旅行需求拆成天气查询、预算评估和行程安排
+tools:
+  - weather-forecast
+  - budget-check
+  - itinerary-planner
+---
+
+# 旅行计划
+
+这里写使用条件、执行步骤、工具调用顺序和回答要求。
+```
+
+别人可以下载一个包含 `SKILL.md` 的技能目录放进 `apps/builder/src/skills/`，Builder 会读取它并显示在技能选择区。
+
 ## 免费接口旅行工具
 
 - `weather-forecast`：调用 Open-Meteo 免费接口，免 API Key，用于查询目的地天气。

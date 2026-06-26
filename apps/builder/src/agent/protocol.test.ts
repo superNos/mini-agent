@@ -53,7 +53,7 @@ describe("agent protocol", () => {
         id: "demo",
         name: "演示技能",
         description: "演示 Skill 如何追加提示词",
-        systemPromptAddon: "优先解释动作选择。",
+        content: "优先解释动作选择。",
         toolIds: [],
       },
     ]);

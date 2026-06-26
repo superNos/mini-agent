@@ -1,9 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { AgentMessage } from "@/agent/model";
 import type { TraceStep } from "@/agent/trace";
-import { skillMetadata } from "@/registry/skills";
 import type { SkillId, ToolId } from "@/schemas/agent-config";
 import {
   Activity,
@@ -60,6 +59,14 @@ const DEFAULT_STATE: BuilderState = {
 
 type SkillOptionId = BuilderState["selectedSkills"][number];
 type TraceFilter = "all" | TraceStep["type"];
+
+type SkillOption = {
+  id: SkillId;
+  name: string;
+  description: string;
+  content: string;
+  toolIds: string[];
+};
 
 type RunResult = {
   answer?: string;
@@ -402,6 +409,8 @@ function SectionHeader({ title }: { title: string }) {
 
 function ConfigSidebar({
   state,
+  skills,
+  skillsError,
   isCollapsed,
   onToggleCollapse,
   onFieldChange,
@@ -409,6 +418,8 @@ function ConfigSidebar({
   onToggleSkill,
 }: {
   state: BuilderState;
+  skills: SkillOption[];
+  skillsError: string;
   isCollapsed: boolean;
   onToggleCollapse: () => void;
   onFieldChange: <Key extends keyof BuilderState>(field: Key, value: BuilderState[Key]) => void;
@@ -558,7 +569,17 @@ function ConfigSidebar({
         <section className="space-y-3 border-t border-zinc-200 pt-5">
           <SectionHeader title="技能" />
           <div className="space-y-2">
-            {skillMetadata.map((skill) => {
+            {skillsError ? (
+              <div className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-xs leading-5 text-red-800">
+                {skillsError}
+              </div>
+            ) : null}
+            {skills.length === 0 && !skillsError ? (
+              <div className="rounded-md border border-dashed border-zinc-300 bg-zinc-50 px-3 py-4 text-xs leading-5 text-zinc-500">
+                未发现技能包。请把包含 SKILL.md 的目录放到 src/skills/ 下。
+              </div>
+            ) : null}
+            {skills.map((skill) => {
               const checked = state.selectedSkills.includes(skill.id);
               return (
                 <label
@@ -587,7 +608,8 @@ function ConfigSidebar({
                     <span className="block text-sm font-medium text-zinc-950">{skill.name}</span>
                     <span className="block text-xs leading-5 text-zinc-500">{skill.description}</span>
                     <span className="mt-2 block rounded-md border border-zinc-200 bg-white px-2 py-1 text-xs leading-5 text-zinc-600">
-                      {skill.systemPromptAddon}
+                      {skill.content.split(/\r?\n/).find((line) => line.trim() && !line.startsWith("#")) ??
+                        "查看 SKILL.md 获取完整说明。"}
                     </span>
                     <span className="mt-2 flex flex-wrap gap-1">
                       <span className="inline-flex rounded-md border border-zinc-200 bg-white px-1.5 py-0.5 font-mono text-[11px] text-zinc-500">
@@ -1109,6 +1131,8 @@ function TraceSidebar({
 
 export default function BuilderPage() {
   const [state, setState] = useState<BuilderState>(DEFAULT_STATE);
+  const [skills, setSkills] = useState<SkillOption[]>([]);
+  const [skillsError, setSkillsError] = useState("");
   const [isRunning, setIsRunning] = useState(false);
   const [runError, setRunError] = useState("");
   const [runResult, setRunResult] = useState<RunResult | null>(null);
@@ -1126,7 +1150,32 @@ export default function BuilderPage() {
       ? "active"
       : runResult
         ? "success"
-        : "neutral";
+      : "neutral";
+
+  useEffect(() => {
+    let isMounted = true;
+
+    async function loadSkills() {
+      try {
+        const response = await fetch("/api/skills");
+        const data = (await response.json()) as { skills?: SkillOption[]; error?: string };
+        if (!response.ok) throw new Error(data.error ?? "技能加载失败");
+        if (isMounted) {
+          setSkills(data.skills ?? []);
+          setSkillsError("");
+        }
+      } catch (error) {
+        if (isMounted) {
+          setSkillsError(error instanceof Error ? error.message : String(error));
+        }
+      }
+    }
+
+    void loadSkills();
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   function updateField<Key extends keyof BuilderState>(field: Key, value: BuilderState[Key]) {
     setState((current) => ({ ...current, [field]: value }));
@@ -1316,6 +1365,8 @@ export default function BuilderPage() {
       >
         <ConfigSidebar
           state={state}
+          skills={skills}
+          skillsError={skillsError}
           isCollapsed={isConfigCollapsed}
           onToggleCollapse={() => setIsConfigCollapsed((current) => !current)}
           onFieldChange={updateField}

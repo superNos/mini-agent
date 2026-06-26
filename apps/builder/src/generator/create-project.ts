@@ -1,5 +1,6 @@
 import { cp, mkdir, readdir, stat, writeFile } from "node:fs/promises";
 import path from "node:path";
+import type { Skill } from "@/agent/skill";
 import type { CreateProjectRequest, SkillId, ToolId } from "@/schemas/agent-config";
 import { getSkillsByIds } from "@/registry/skills";
 import { getToolIdsForSkills } from "@/registry/tools";
@@ -48,14 +49,19 @@ async function copySelectedTools(builderRoot: string, projectPath: string, selec
   await writeFile(path.join(targetToolsDir, "index.ts"), renderToolsIndex(selectedTools));
 }
 
-async function copySelectedSkills(builderRoot: string, projectPath: string, selectedSkills: SkillId[]) {
+async function copySelectedSkills(
+  builderRoot: string,
+  projectPath: string,
+  selectedSkills: Skill[],
+) {
   const targetSkillsDir = path.join(projectPath, "src", "skills");
   await mkdir(targetSkillsDir, { recursive: true });
 
-  for (const skillId of selectedSkills) {
+  for (const skill of selectedSkills) {
     await cp(
-      path.join(builderRoot, "src", "skills", `${skillId}.ts`),
-      path.join(targetSkillsDir, `${skillId}.ts`),
+      path.join(builderRoot, "src", "skills", skill.id),
+      path.join(targetSkillsDir, skill.id),
+      { recursive: true },
     );
   }
 
@@ -78,11 +84,12 @@ export async function createProject(input: CreateProjectInput): Promise<CreatePr
   const parsed = createProjectRequestSchema.parse(input.request);
   const selectedSkills = [...new Set(parsed.selectedSkills)];
   const skills = getSkillsByIds(selectedSkills);
+  const resolvedSkillIds = skills.map((skill) => skill.id as SkillId);
   const selectedTools = dedupeToolIds([
     ...parsed.selectedTools,
     ...getToolIdsForSkills(skills),
   ]);
-  const request = { ...parsed, selectedSkills, selectedTools };
+  const request = { ...parsed, selectedSkills: resolvedSkillIds, selectedTools };
   const workspaceRoot = input.workspaceRoot ?? getWorkspaceRoot();
   const builderRoot = input.builderRoot ?? getBuilderRoot();
   const { generatedRoot, projectPath } = validateProjectOutputPath(workspaceRoot, request.projectSlug);
@@ -93,7 +100,7 @@ export async function createProject(input: CreateProjectInput): Promise<CreatePr
   await cp(templateRoot, projectPath, { recursive: true });
   await copyAgentCore(builderRoot, projectPath);
   await copySelectedTools(builderRoot, projectPath, request.selectedTools);
-  await copySelectedSkills(builderRoot, projectPath, request.selectedSkills);
+  await copySelectedSkills(builderRoot, projectPath, skills);
   await writeFile(path.join(projectPath, "src", "agent", "config.ts"), renderAgentConfig(request));
 
   return {
