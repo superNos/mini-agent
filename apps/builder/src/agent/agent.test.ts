@@ -161,6 +161,36 @@ describe("runAgent", () => {
     );
   });
 
+  it("adds selected skill guidance to the system message", async () => {
+    const model = fakeModel([JSON.stringify({ type: "final", answer: "done" })]);
+
+    await runAgent({
+      model,
+      tools: [],
+      skills: [
+        {
+          id: "demo-skill",
+          name: "演示技能",
+          description: "追加一段系统提示词",
+          systemPromptAddon: "回答前先确认是否需要工具。",
+          toolIds: [],
+        },
+      ],
+      systemPrompt: "Return JSON.",
+      userInput: "hello",
+      maxSteps: 3,
+    });
+
+    expect(model.calls[0][0]).toEqual(
+      expect.objectContaining({
+        role: "system",
+        content: expect.stringContaining("Selected skills:"),
+      }),
+    );
+    expect(model.calls[0][0]?.content).toContain("演示技能");
+    expect(model.calls[0][0]?.content).toContain("回答前先确认是否需要工具。");
+  });
+
   it("returns error trace for invalid JSON", async () => {
     const result = await runAgent({
       model: fakeModel(["not json"]),

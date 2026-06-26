@@ -1,8 +1,11 @@
 import { cp, mkdir, readdir, stat, writeFile } from "node:fs/promises";
 import path from "node:path";
-import type { CreateProjectRequest, ToolId } from "@/schemas/agent-config";
+import type { CreateProjectRequest, SkillId, ToolId } from "@/schemas/agent-config";
+import { getSkillsByIds } from "@/registry/skills";
+import { getToolIdsForSkills } from "@/registry/tools";
 import { createProjectRequestSchema } from "@/schemas/agent-config";
 import { renderAgentConfig } from "./render-config";
+import { renderSkillsIndex } from "./render-skills-index";
 import { renderToolsIndex } from "./render-tools-index";
 import { getBuilderRoot, getWorkspaceRoot, validateProjectOutputPath } from "./paths";
 
@@ -45,6 +48,20 @@ async function copySelectedTools(builderRoot: string, projectPath: string, selec
   await writeFile(path.join(targetToolsDir, "index.ts"), renderToolsIndex(selectedTools));
 }
 
+async function copySelectedSkills(builderRoot: string, projectPath: string, selectedSkills: SkillId[]) {
+  const targetSkillsDir = path.join(projectPath, "src", "skills");
+  await mkdir(targetSkillsDir, { recursive: true });
+
+  for (const skillId of selectedSkills) {
+    await cp(
+      path.join(builderRoot, "src", "skills", `${skillId}.ts`),
+      path.join(targetSkillsDir, `${skillId}.ts`),
+    );
+  }
+
+  await writeFile(path.join(targetSkillsDir, "index.ts"), renderSkillsIndex(selectedSkills));
+}
+
 async function copyAgentCore(builderRoot: string, projectPath: string) {
   const sourceDir = path.join(builderRoot, "src", "agent");
   const targetDir = path.join(projectPath, "src", "agent");
@@ -59,7 +76,13 @@ async function copyAgentCore(builderRoot: string, projectPath: string) {
 
 export async function createProject(input: CreateProjectInput): Promise<CreateProjectResult> {
   const parsed = createProjectRequestSchema.parse(input.request);
-  const request = { ...parsed, selectedTools: dedupeToolIds(parsed.selectedTools) };
+  const selectedSkills = [...new Set(parsed.selectedSkills)];
+  const skills = getSkillsByIds(selectedSkills);
+  const selectedTools = dedupeToolIds([
+    ...parsed.selectedTools,
+    ...getToolIdsForSkills(skills),
+  ]);
+  const request = { ...parsed, selectedSkills, selectedTools };
   const workspaceRoot = input.workspaceRoot ?? getWorkspaceRoot();
   const builderRoot = input.builderRoot ?? getBuilderRoot();
   const { generatedRoot, projectPath } = validateProjectOutputPath(workspaceRoot, request.projectSlug);
@@ -70,7 +93,7 @@ export async function createProject(input: CreateProjectInput): Promise<CreatePr
   await cp(templateRoot, projectPath, { recursive: true });
   await copyAgentCore(builderRoot, projectPath);
   await copySelectedTools(builderRoot, projectPath, request.selectedTools);
-  await mkdir(path.join(projectPath, "src", "skills"), { recursive: true });
+  await copySelectedSkills(builderRoot, projectPath, request.selectedSkills);
   await writeFile(path.join(projectPath, "src", "agent", "config.ts"), renderAgentConfig(request));
 
   return {

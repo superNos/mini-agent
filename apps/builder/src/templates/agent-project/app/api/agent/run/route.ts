@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { runAgent } from "@/agent/agent";
 import { OpenAICompatibleModelProvider } from "@/agent/model";
 import { AGENT_CONFIG } from "@/agent/config";
+import { getSelectedSkills } from "@/skills";
 import { getSelectedTools } from "@/tools";
 
 export async function POST(request: Request) {
@@ -17,6 +18,7 @@ export async function POST(request: Request) {
   const input = body.input.trim();
 
   const result = await runAgent({
+    skills: getSelectedSkills(AGENT_CONFIG.selectedSkillIds),
     model: new OpenAICompatibleModelProvider({
       baseUrl: AGENT_CONFIG.baseUrl,
       apiKey,

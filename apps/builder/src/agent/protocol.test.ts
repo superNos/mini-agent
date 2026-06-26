@@ -46,4 +46,20 @@ describe("agent protocol", () => {
     expect(prompt).toContain('To use a tool, return {"type":"tool"');
     expect(prompt).toContain("- demo: Demo tool.");
   });
+
+  it("builds the protocol prompt with selected skills", () => {
+    const prompt = buildAgentSystemPrompt("Base prompt", [], [
+      {
+        id: "demo",
+        name: "演示技能",
+        description: "演示 Skill 如何追加提示词",
+        systemPromptAddon: "优先解释动作选择。",
+        toolIds: [],
+      },
+    ]);
+
+    expect(prompt).toContain("Selected skills:");
+    expect(prompt).toContain("演示技能");
+    expect(prompt).toContain("优先解释动作选择。");
+  });
 });

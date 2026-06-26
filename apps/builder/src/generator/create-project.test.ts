@@ -23,6 +23,15 @@ async function createBuilderFixture() {
   await writeFile(path.join(builderRoot, "src", "agent", "agent.test.ts"), "test(\"agent\", () => {});");
   await writeFile(path.join(builderRoot, "src", "tools", "calculator.ts"), "export const calculatorTool = {};");
   await writeFile(path.join(builderRoot, "src", "tools", "current-time.ts"), "export const currentTimeTool = {};");
+  await mkdir(path.join(builderRoot, "src", "skills"), { recursive: true });
+  await writeFile(
+    path.join(builderRoot, "src", "skills", "arithmetic-check.ts"),
+    "export const arithmeticCheckSkill = {};",
+  );
+  await writeFile(
+    path.join(builderRoot, "src", "skills", "time-awareness.ts"),
+    "export const timeAwarenessSkill = {};",
+  );
 
   return {
     workspaceRoot,
@@ -171,6 +180,38 @@ describe("createProject", () => {
       expect(toolsIndex).not.toContain("import {");
       expect(toolsIndex).toContain("const tools: Record<string, AnyTool> = {");
       expect(toolsIndex).toContain("export function getSelectedTools(ids: readonly string[])");
+    } finally {
+      await cleanup();
+    }
+  });
+
+  it("copies selected skills and includes their dependent tools", async () => {
+    const { workspaceRoot, builderRoot, cleanup } = await createBuilderFixture();
+
+    try {
+      const result = await createProject({
+        workspaceRoot,
+        builderRoot,
+        request: {
+          projectName: "My Agent",
+          projectSlug: "my-agent",
+          baseUrl: "https://api.example.com/v1",
+          model: "test-model",
+          systemPrompt: "Return JSON.",
+          selectedTools: [],
+          selectedSkills: ["arithmetic-check"],
+        },
+      });
+
+      await expect(stat(path.join(result.projectPath, "src", "skills", "arithmetic-check.ts"))).resolves.toBeTruthy();
+      const skillsIndex = await readFile(path.join(result.projectPath, "src", "skills", "index.ts"), "utf8");
+      expect(skillsIndex).toContain('import { arithmeticCheckSkill } from "./arithmetic-check";');
+      expect(skillsIndex).toContain('"arithmetic-check": arithmeticCheckSkill');
+
+      await expect(stat(path.join(result.projectPath, "src", "tools", "calculator.ts"))).resolves.toBeTruthy();
+      const config = await readFile(path.join(result.projectPath, "src", "agent", "config.ts"), "utf8");
+      expect(config).toContain('"selectedSkillIds": [\n    "arithmetic-check"\n  ]');
+      expect(config).toContain('"selectedToolIds": [\n    "calculator"\n  ]');
     } finally {
       await cleanup();
     }

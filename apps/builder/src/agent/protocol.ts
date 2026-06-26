@@ -1,4 +1,5 @@
 import { z } from "zod";
+import type { Skill } from "./skill";
 import type { AnyTool } from "./tool";
 
 export const toolActionSchema = z.object({
@@ -29,7 +30,21 @@ function toolInputExample(toolName: string) {
   return "Use a JSON object matching this tool's input schema.";
 }
 
-export function buildAgentSystemPrompt(systemPrompt: string, tools: AnyTool[]) {
+function buildSkillsSection(skills: Skill[]) {
+  if (skills.length === 0) return "";
+
+  return [
+    "Selected skills:",
+    ...skills.map((skill) =>
+      [`- ${skill.name}: ${skill.description}`, `  Guidance: ${skill.systemPromptAddon}`].join(
+        "\n",
+      ),
+    ),
+    "",
+  ].join("\n");
+}
+
+export function buildAgentSystemPrompt(systemPrompt: string, tools: AnyTool[], skills: Skill[] = []) {
   const toolList =
     tools.length === 0
       ? "No tools are available."
@@ -45,6 +60,7 @@ export function buildAgentSystemPrompt(systemPrompt: string, tools: AnyTool[]) {
   return [
     systemPrompt,
     "",
+    buildSkillsSection(skills),
     "Return only valid JSON. Do not include markdown fences, commentary, or extra text.",
     'To use a tool, return {"type":"tool","toolName":"tool-name","toolInput":{}}.',
     'To finish, return {"type":"final","answer":"your answer"}.',

@@ -3,6 +3,8 @@
 import { useState } from "react";
 import type { AgentMessage } from "@/agent/model";
 import type { TraceStep } from "@/agent/trace";
+import { skillMetadata } from "@/registry/skills";
+import type { SkillId } from "@/schemas/agent-config";
 import {
   Activity,
   AlertCircle,
@@ -36,7 +38,7 @@ type BuilderState = {
   model: string;
   systemPrompt: string;
   selectedTools: Array<"calculator" | "current-time">;
-  selectedSkills: string[];
+  selectedSkills: SkillId[];
   userInput: string;
 };
 
@@ -53,6 +55,7 @@ const DEFAULT_STATE: BuilderState = {
 };
 
 type ToolId = BuilderState["selectedTools"][number];
+type SkillOptionId = BuilderState["selectedSkills"][number];
 type TraceFilter = "all" | TraceStep["type"];
 
 type RunResult = {
@@ -382,12 +385,14 @@ function ConfigSidebar({
   onToggleCollapse,
   onFieldChange,
   onToggleTool,
+  onToggleSkill,
 }: {
   state: BuilderState;
   isCollapsed: boolean;
   onToggleCollapse: () => void;
   onFieldChange: <Key extends keyof BuilderState>(field: Key, value: BuilderState[Key]) => void;
   onToggleTool: (toolId: ToolId) => void;
+  onToggleSkill: (skillId: SkillOptionId) => void;
 }) {
   if (isCollapsed) {
     return (
@@ -531,8 +536,55 @@ function ConfigSidebar({
 
         <section className="space-y-3 border-t border-zinc-200 pt-5">
           <SectionHeader title="技能" />
-          <div className="rounded-md border border-dashed border-zinc-300 bg-zinc-50 px-3 py-4 text-sm leading-6 text-zinc-600">
-            暂无已注册技能
+          <div className="space-y-2">
+            {skillMetadata.map((skill) => {
+              const checked = state.selectedSkills.includes(skill.id);
+              return (
+                <label
+                  key={skill.id}
+                  className={classNames(
+                    "flex cursor-pointer items-start gap-3 rounded-md border p-3 transition",
+                    checked
+                      ? "border-cyan-200 bg-cyan-50/70"
+                      : "border-zinc-200 bg-white hover:border-zinc-300 hover:bg-zinc-50",
+                  )}
+                >
+                  <input
+                    type="checkbox"
+                    checked={checked}
+                    onChange={() => onToggleSkill(skill.id)}
+                    className="mt-1 h-4 w-4 rounded border-zinc-300 text-cyan-600 focus:ring-cyan-500"
+                  />
+                  <Layers3
+                    className={classNames(
+                      "mt-0.5 h-4 w-4 shrink-0",
+                      checked ? "text-cyan-700" : "text-zinc-500",
+                    )}
+                    aria-hidden="true"
+                  />
+                  <span className="min-w-0">
+                    <span className="block text-sm font-medium text-zinc-950">{skill.name}</span>
+                    <span className="block text-xs leading-5 text-zinc-500">{skill.description}</span>
+                    <span className="mt-2 block rounded-md border border-zinc-200 bg-white px-2 py-1 text-xs leading-5 text-zinc-600">
+                      {skill.systemPromptAddon}
+                    </span>
+                    <span className="mt-2 flex flex-wrap gap-1">
+                      <span className="inline-flex rounded-md border border-zinc-200 bg-white px-1.5 py-0.5 font-mono text-[11px] text-zinc-500">
+                        {skill.id}
+                      </span>
+                      {skill.toolIds.map((toolId) => (
+                        <span
+                          key={toolId}
+                          className="inline-flex rounded-md border border-blue-200 bg-blue-50 px-1.5 py-0.5 font-mono text-[11px] text-blue-700"
+                        >
+                          依赖 {toolId}
+                        </span>
+                      ))}
+                    </span>
+                  </span>
+                </label>
+              );
+            })}
           </div>
         </section>
 
@@ -1069,6 +1121,16 @@ export default function BuilderPage() {
     });
   }
 
+  function toggleSkill(skillId: SkillOptionId) {
+    setState((current) => {
+      const selectedSkills = current.selectedSkills.includes(skillId)
+        ? current.selectedSkills.filter((selectedSkill) => selectedSkill !== skillId)
+        : [...current.selectedSkills, skillId];
+
+      return { ...current, selectedSkills };
+    });
+  }
+
   async function runAgent() {
     setIsRunning(true);
     setRunError("");
@@ -1237,6 +1299,7 @@ export default function BuilderPage() {
           onToggleCollapse={() => setIsConfigCollapsed((current) => !current)}
           onFieldChange={updateField}
           onToggleTool={toggleTool}
+          onToggleSkill={toggleSkill}
         />
 
         <div className="min-w-0 space-y-3">

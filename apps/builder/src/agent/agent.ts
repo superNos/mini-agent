@@ -1,5 +1,6 @@
 import type { AgentMessage, ModelProvider } from "./model";
 import { buildAgentSystemPrompt, parseModelAction } from "./protocol";
+import type { Skill } from "./skill";
 import type { AnyTool } from "./tool";
 import type { TraceStep } from "./trace";
 
@@ -8,6 +9,7 @@ export type RunAgentInput = {
   tools: AnyTool[];
   systemPrompt: string;
   userInput: string;
+  skills?: Skill[];
   maxSteps?: number;
   onTraceStep?: (step: TraceStep) => void | Promise<void>;
 };
@@ -71,7 +73,10 @@ export async function runAgent(input: RunAgentInput): Promise<RunAgentResult> {
   const maxSteps = input.maxSteps ?? 8;
   const trace: TraceStep[] = [];
   const messages: AgentMessage[] = [
-    { role: "system", content: buildAgentSystemPrompt(input.systemPrompt, input.tools) },
+    {
+      role: "system",
+      content: buildAgentSystemPrompt(input.systemPrompt, input.tools, input.skills ?? []),
+    },
     { role: "user", content: input.userInput },
   ];
 

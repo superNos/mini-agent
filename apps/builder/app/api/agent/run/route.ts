@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 import { runAgent } from "@/agent/agent";
 import { OpenAICompatibleModelProvider } from "@/agent/model";
-import { getToolsByIds } from "@/registry/tools";
+import { getSkillsByIds } from "@/registry/skills";
+import { getToolIdsForSkills, getToolsByIds } from "@/registry/tools";
 import { builderRunRequestSchema } from "@/schemas/agent-config";
 
 function errorMessage(error: unknown) {
@@ -33,9 +34,14 @@ export async function POST(request: Request) {
       }
 
       try {
+        const skills = getSkillsByIds(parsed.data.selectedSkills);
         const result = await runAgent({
           model,
-          tools: getToolsByIds(parsed.data.selectedTools),
+          tools: getToolsByIds([
+            ...parsed.data.selectedTools,
+            ...getToolIdsForSkills(skills),
+          ]),
+          skills,
           systemPrompt: parsed.data.systemPrompt,
           userInput: parsed.data.userInput,
           maxSteps: 6,

@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 export const toolIdSchema = z.enum(["calculator", "current-time"]);
+export const skillIdSchema = z.enum(["arithmetic-check", "time-awareness"]);
 
 export const baseUrlSchema = z
   .string()
@@ -14,7 +15,7 @@ export const baseUrlSchema = z
     }
   }, "请使用 http 或 https 地址");
 
-const selectedSkillsSchema = z.array(z.string()).max(0, "暂未安装技能").default([]);
+const selectedSkillsSchema = z.array(skillIdSchema).default([]);
 
 export const projectSlugSchema = z
   .string()
@@ -50,5 +51,6 @@ export const createProjectRequestSchema = z.object({
 });
 
 export type ToolId = z.infer<typeof toolIdSchema>;
+export type SkillId = z.infer<typeof skillIdSchema>;
 export type BuilderRunRequest = z.infer<typeof builderRunRequestSchema>;
 export type CreateProjectRequest = z.infer<typeof createProjectRequestSchema>;

@@ -2,6 +2,7 @@ import type { AnyTool } from "@/agent/tool";
 import type { ToolId } from "@/schemas/agent-config";
 import { calculatorTool } from "@/tools/calculator";
 import { currentTimeTool } from "@/tools/current-time";
+import type { Skill } from "@/agent/skill";
 
 export type ToolMetadata = {
   id: ToolId;
@@ -28,5 +29,10 @@ export const toolMetadata: ToolMetadata[] = [
 ];
 
 export function getToolsByIds(ids: ToolId[]) {
-  return ids.map((id) => toolRegistry[id]);
+  return [...new Set(ids)].map((id) => toolRegistry[id]);
+}
+
+export function getToolIdsForSkills(skills: Skill[]): ToolId[] {
+  const ids = skills.flatMap((skill) => skill.toolIds ?? []);
+  return ids.filter((id): id is ToolId => id === "calculator" || id === "current-time");
 }

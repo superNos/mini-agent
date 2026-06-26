@@ -1,11 +1,29 @@
 import type { Skill } from "@/agent/skill";
+import type { SkillId } from "@/schemas/agent-config";
+import { arithmeticCheckSkill } from "@/skills/arithmetic-check";
+import { timeAwarenessSkill } from "@/skills/time-awareness";
 
-export const skillRegistry: Record<string, Skill> = {};
+export type SkillMetadata = {
+  id: SkillId;
+  name: string;
+  description: string;
+  systemPromptAddon: string;
+  toolIds: string[];
+};
 
-export function getSkillsByIds(ids: string[]): Skill[] {
-  if (ids.length > 0) {
-    throw new Error("No skills are installed yet");
-  }
+export const skillRegistry: Record<SkillId, Skill> = {
+  "arithmetic-check": arithmeticCheckSkill,
+  "time-awareness": timeAwarenessSkill,
+};
 
-  return [];
+export const skillMetadata: SkillMetadata[] = Object.values(skillRegistry).map((skill) => ({
+  id: skill.id as SkillId,
+  name: skill.name,
+  description: skill.description,
+  systemPromptAddon: skill.systemPromptAddon,
+  toolIds: skill.toolIds ?? [],
+}));
+
+export function getSkillsByIds(ids: SkillId[]): Skill[] {
+  return ids.map((id) => skillRegistry[id]);
 }

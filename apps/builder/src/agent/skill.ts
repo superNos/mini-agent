@@ -1,6 +1,7 @@
 export type Skill = {
+  id: string;
   name: string;
   description: string;
   systemPromptAddon: string;
-  toolNames?: string[];
+  toolIds?: string[];
 };
