@@ -212,19 +212,8 @@ function TextField({
   );
 }
 
-function SectionHeader({
-  title,
-  description,
-}: {
-  title: string;
-  description?: string;
-}) {
-  return (
-    <div>
-      <h2 className="text-sm font-semibold text-zinc-950">{title}</h2>
-      {description ? <p className="mt-1 text-xs leading-5 text-zinc-500">{description}</p> : null}
-    </div>
-  );
+function SectionHeader({ title }: { title: string }) {
+  return <h2 className="text-sm font-semibold text-zinc-950">{title}</h2>;
 }
 
 function ConfigSidebar({
@@ -303,7 +292,6 @@ function ConfigSidebar({
       <div className="flex h-12 items-center justify-between border-b border-zinc-200 px-4">
         <div className="min-w-0">
           <p className="text-sm font-semibold text-zinc-950">智能体配置</p>
-          <p className="truncate text-xs text-zinc-500">固定注册表 · 独立生成项目</p>
         </div>
         <IconButton label="收起配置" onClick={onToggleCollapse}>
           <PanelLeftClose className="h-4 w-4" aria-hidden="true" />
@@ -312,7 +300,7 @@ function ConfigSidebar({
 
       <div className="max-h-none space-y-6 overflow-auto p-4 lg:max-h-[calc(100vh-148px)]">
         <section className="space-y-3">
-          <SectionHeader title="项目" description="生成后的目录名和页面标题。" />
+          <SectionHeader title="项目" />
           <TextField
             name="projectName"
             label="项目名称"
@@ -330,7 +318,7 @@ function ConfigSidebar({
         </section>
 
         <section className="space-y-3 border-t border-zinc-200 pt-5">
-          <SectionHeader title="模型连接" description="使用 OpenAI-compatible 接口试跑当前 Agent。" />
+          <SectionHeader title="模型连接" />
           <TextField
             name="baseUrl"
             label="接口地址"
@@ -358,7 +346,7 @@ function ConfigSidebar({
         </section>
 
         <section className="space-y-3 border-t border-zinc-200 pt-5">
-          <SectionHeader title="已注册工具" description="从代码注册表选择本次智能体要挂载的工具。" />
+          <SectionHeader title="已注册工具" />
           <div className="space-y-2">
             {TOOL_OPTIONS.map(({ id, label, description, Icon }) => {
               const checked = state.selectedTools.includes(id);
@@ -399,10 +387,9 @@ function ConfigSidebar({
         </section>
 
         <section className="space-y-3 border-t border-zinc-200 pt-5">
-          <SectionHeader title="技能" description="技能同样来自固定注册表，按本次 Agent 需要启用。" />
+          <SectionHeader title="技能" />
           <div className="rounded-md border border-dashed border-zinc-300 bg-zinc-50 px-3 py-4 text-sm leading-6 text-zinc-600">
-            暂无已注册技能。学习时可在 <code className="font-mono text-zinc-800">apps/builder/src/skills</code>{" "}
-            新增技能，并在注册表中启用。
+            暂无已注册技能
           </div>
         </section>
 
@@ -442,7 +429,6 @@ function PromptEditor({
       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-zinc-200 px-4 py-3">
         <div>
           <h2 className="text-sm font-semibold text-zinc-950">Prompt 控制台</h2>
-          <p className="mt-1 text-xs text-zinc-500">编辑系统提示词和本次用户任务，然后试跑 Agent Loop。</p>
         </div>
         <button
           type="button"
@@ -514,7 +500,6 @@ function ObservationWorkspace({
       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-zinc-200 px-4 py-3">
         <div>
           <h2 className="text-sm font-semibold text-zinc-950">观察结果</h2>
-          <p className="mt-1 text-xs text-zinc-500">查看最终回答或生成项目后的下一步命令。</p>
         </div>
         <div className="inline-flex rounded-md border border-zinc-200 bg-zinc-50 p-0.5">
           <button
@@ -778,7 +763,6 @@ function TraceSidebar({
       <div className="flex h-12 items-center justify-between border-b border-zinc-200 px-4">
         <div className="min-w-0">
           <p className="text-sm font-semibold text-zinc-950">运行轨迹</p>
-          <p className="truncate text-xs text-zinc-500">模型输出、工具调用与最终响应</p>
         </div>
         <IconButton label="收起轨迹" onClick={onToggleCollapse}>
           <PanelRightClose className="h-4 w-4" aria-hidden="true" />
