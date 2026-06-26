@@ -104,7 +104,9 @@ const TOOL_OPTIONS: Array<{
 const TRACE_FILTERS: Array<{ id: TraceFilter; label: string }> = [
   { id: "all", label: "全部" },
   { id: "model", label: "模型" },
+  { id: "action", label: "协议" },
   { id: "tool", label: "工具" },
+  { id: "observation", label: "观察" },
   { id: "final", label: "最终" },
   { id: "error", label: "错误" },
 ];
@@ -165,21 +167,27 @@ function getTraceSummary(trace: TraceStep[] | undefined) {
   return {
     total: steps.length,
     model: steps.filter((step) => step.type === "model").length,
+    action: steps.filter((step) => step.type === "action").length,
     tool: steps.filter((step) => step.type === "tool").length,
+    observation: steps.filter((step) => step.type === "observation").length,
     error: steps.filter((step) => step.type === "error").length,
     final: steps.filter((step) => step.type === "final").length,
   };
 }
 
 function stepTitle(step: TraceStep) {
-  if (step.type === "tool") return `工具调用 · ${step.toolName}`;
-  if (step.type === "model") return "模型调用";
+  if (step.type === "tool") return `${step.phase === "started" ? "开始调用工具" : "工具调用完成"} · ${step.toolName}`;
+  if (step.type === "model") return step.phase === "started" ? "开始调用模型" : "模型调用完成";
+  if (step.type === "action") return "协议解析完成";
+  if (step.type === "observation") return `观察结果入队 · ${step.toolName}`;
   if (step.type === "final") return "最终回答";
   return "运行错误";
 }
 
 function stepBadgeClass(type: TraceStep["type"]) {
   if (type === "tool") return "border-blue-200 bg-blue-50 text-blue-700";
+  if (type === "action") return "border-amber-200 bg-amber-50 text-amber-700";
+  if (type === "observation") return "border-cyan-200 bg-cyan-50 text-cyan-700";
   if (type === "final") return "border-emerald-200 bg-emerald-50 text-emerald-700";
   if (type === "error") return "border-red-200 bg-red-50 text-red-700";
   return "border-indigo-200 bg-indigo-50 text-indigo-700";
@@ -187,6 +195,8 @@ function stepBadgeClass(type: TraceStep["type"]) {
 
 function stepIconClass(type: TraceStep["type"]) {
   if (type === "tool") return "border-blue-200 bg-blue-50 text-blue-700";
+  if (type === "action") return "border-amber-200 bg-amber-50 text-amber-700";
+  if (type === "observation") return "border-cyan-200 bg-cyan-50 text-cyan-700";
   if (type === "final") return "border-emerald-200 bg-emerald-50 text-emerald-700";
   if (type === "error") return "border-red-200 bg-red-50 text-red-700";
   return "border-indigo-200 bg-indigo-50 text-indigo-700";
@@ -273,6 +283,11 @@ function ModelInputBlock({ messages }: { messages: AgentMessage[] }) {
       ))}
     </div>
   );
+}
+
+function DurationText({ durationMs }: { durationMs?: number }) {
+  if (durationMs === undefined) return null;
+  return <span className="text-[11px] text-zinc-400">{durationMs}ms</span>;
 }
 
 function StatusPill({
@@ -735,12 +750,35 @@ function TraceDetails({ step }: { step: TraceStep }) {
   if (step.type === "model") {
     return (
       <div className="mt-3 space-y-3">
+        <div className="flex items-center justify-between gap-2">
+          <p className="text-xs font-medium text-zinc-500">
+            {step.phase === "started" ? "模型请求已开始" : "模型请求已完成"}
+          </p>
+          <DurationText durationMs={step.phase === "completed" ? step.durationMs : undefined} />
+        </div>
         <div>
           <p className="mb-1.5 text-xs font-medium text-zinc-500">输入 messages</p>
           <ModelInputBlock messages={step.modelInput} />
         </div>
+        {step.phase === "completed" ? (
+          <div>
+            <p className="mb-1.5 text-xs font-medium text-zinc-500">输出</p>
+            <ModelOutputBlock modelOutput={step.modelOutput} />
+          </div>
+        ) : null}
+      </div>
+    );
+  }
+
+  if (step.type === "action") {
+    return (
+      <div className="mt-3 space-y-3">
         <div>
-          <p className="mb-1.5 text-xs font-medium text-zinc-500">输出</p>
+          <p className="mb-1.5 text-xs font-medium text-zinc-500">解析结果</p>
+          <JsonTreeBlock value={step.action} />
+        </div>
+        <div>
+          <p className="mb-1.5 text-xs font-medium text-zinc-500">模型原始输出</p>
           <ModelOutputBlock modelOutput={step.modelOutput} />
         </div>
       </div>
@@ -750,13 +788,36 @@ function TraceDetails({ step }: { step: TraceStep }) {
   if (step.type === "tool") {
     return (
       <div className="mt-3 space-y-3">
+        <div className="flex items-center justify-between gap-2">
+          <p className="text-xs font-medium text-zinc-500">
+            {step.phase === "started" ? "工具调用已开始" : "工具调用已完成"}
+          </p>
+          <DurationText durationMs={step.phase === "completed" ? step.durationMs : undefined} />
+        </div>
         <div>
           <p className="mb-1.5 text-xs font-medium text-zinc-500">输入</p>
           <JsonTreeBlock value={step.toolInput} />
         </div>
+        {step.phase === "completed" ? (
+          <div>
+            <p className="mb-1.5 text-xs font-medium text-zinc-500">输出</p>
+            <JsonTreeBlock value={step.toolOutput} />
+          </div>
+        ) : null}
+      </div>
+    );
+  }
+
+  if (step.type === "observation") {
+    return (
+      <div className="mt-3 space-y-3">
         <div>
-          <p className="mb-1.5 text-xs font-medium text-zinc-500">输出</p>
-          <JsonTreeBlock value={step.toolOutput} />
+          <p className="mb-1.5 text-xs font-medium text-zinc-500">写回模型的 observation</p>
+          <RawCodeBlock>{step.observation}</RawCodeBlock>
+        </div>
+        <div>
+          <p className="mb-1.5 text-xs font-medium text-zinc-500">下一轮 messages</p>
+          <ModelInputBlock messages={step.messages} />
         </div>
       </div>
     );
@@ -797,6 +858,12 @@ function TraceDetails({ step }: { step: TraceStep }) {
           <JsonTreeBlock value={step.toolInput} />
         </div>
       ) : null}
+      {step.action ? (
+        <div>
+          <p className="mb-1.5 text-xs font-medium text-red-700">已解析动作</p>
+          <JsonTreeBlock value={step.action} />
+        </div>
+      ) : null}
     </div>
   );
 }
@@ -804,7 +871,18 @@ function TraceDetails({ step }: { step: TraceStep }) {
 function TraceCard({ step, defaultOpen }: { step: TraceStep; defaultOpen: boolean }) {
   const [isOpen, setIsOpen] = useState(defaultOpen);
   const isError = step.type === "error";
-  const Icon = step.type === "tool" ? Wrench : step.type === "final" ? CheckCircle2 : isError ? AlertCircle : BrainCircuit;
+  const Icon =
+    step.type === "tool"
+      ? Wrench
+      : step.type === "action"
+        ? Settings2
+        : step.type === "observation"
+          ? Activity
+          : step.type === "final"
+            ? CheckCircle2
+            : isError
+              ? AlertCircle
+              : BrainCircuit;
 
   return (
     <article className="relative pl-8">
@@ -829,6 +907,9 @@ function TraceCard({ step, defaultOpen }: { step: TraceStep; defaultOpen: boolea
               <span className="text-xs font-medium text-zinc-500">第 {step.step} 步</span>
               <span className={classNames("rounded-md border px-1.5 py-0.5 text-[11px] font-medium", stepBadgeClass(step.type))}>
                 {step.type}
+              </span>
+              <span className="rounded-md border border-zinc-200 bg-zinc-50 px-1.5 py-0.5 text-[11px] font-medium text-zinc-500">
+                {step.phase}
               </span>
             </span>
             <span className="block truncate text-sm font-semibold text-zinc-950">{stepTitle(step)}</span>
@@ -935,7 +1016,7 @@ function TraceSidebar({
               <TraceCard
                 key={`${index}-${step.step}-${step.type}`}
                 step={step}
-                defaultOpen={step.type === "error" || index === filteredTrace.length - 1}
+                defaultOpen={step.type === "error" || step.type === "final" || index === filteredTrace.length - 1}
               />
             ))}
           </div>

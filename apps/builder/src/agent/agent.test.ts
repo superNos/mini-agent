@@ -57,12 +57,20 @@ describe("runAgent", () => {
       expect.objectContaining({
         step: 1,
         type: "model",
+        phase: "started",
         modelInput: expect.arrayContaining([
           expect.objectContaining({ role: "system", content: expect.stringContaining("Return JSON.") }),
           expect.objectContaining({ role: "user", content: "hello" }),
         ]),
       }),
-      expect.objectContaining({ step: 1, type: "final", finalAnswer: "done" }),
+      expect.objectContaining({ step: 1, type: "model", phase: "completed" }),
+      expect.objectContaining({
+        step: 1,
+        type: "action",
+        phase: "parsed",
+        action: { type: "final", answer: "done" },
+      }),
+      expect.objectContaining({ step: 1, type: "final", phase: "completed", finalAnswer: "done" }),
     ]);
   });
 
@@ -85,6 +93,7 @@ describe("runAgent", () => {
       expect.arrayContaining([
         expect.objectContaining({
           type: "model",
+          phase: "completed",
           step: 2,
           modelInput: expect.arrayContaining([
             expect.objectContaining({
@@ -102,9 +111,27 @@ describe("runAgent", () => {
           ]),
         }),
         expect.objectContaining({
+          type: "action",
+          phase: "parsed",
+          action: { type: "tool", toolName: "echo", toolInput: { text: "abc" } },
+        }),
+        expect.objectContaining({
           type: "tool",
+          phase: "started",
+          toolName: "echo",
+          toolInput: { text: "abc" },
+        }),
+        expect.objectContaining({
+          type: "tool",
+          phase: "completed",
           toolName: "echo",
           toolOutput: { echoed: "abc" },
+        }),
+        expect.objectContaining({
+          type: "observation",
+          phase: "appended",
+          toolName: "echo",
+          observation: expect.stringContaining('Observation from tool "echo": {"echoed":"abc"}'),
         }),
         expect.objectContaining({ type: "final", finalAnswer: "abc" }),
       ]),
@@ -144,7 +171,7 @@ describe("runAgent", () => {
     });
 
     expect(result.answer).toBe("");
-    expect(result.trace.at(-1)).toEqual(expect.objectContaining({ type: "error" }));
+    expect(result.trace.at(-1)).toEqual(expect.objectContaining({ type: "error", phase: "failed" }));
   });
 
   it("returns error trace for unknown tools", async () => {
@@ -157,7 +184,12 @@ describe("runAgent", () => {
     });
 
     expect(result.trace.at(-1)).toEqual(
-      expect.objectContaining({ type: "error", error: "Unknown tool: missing" }),
+      expect.objectContaining({
+        type: "error",
+        phase: "failed",
+        error: "Unknown tool: missing",
+        action: { type: "tool", toolName: "missing", toolInput: {} },
+      }),
     );
   });
 
@@ -176,6 +208,7 @@ describe("runAgent", () => {
     expect(result.trace.at(-1)).toEqual(
       expect.objectContaining({
         type: "error",
+        phase: "failed",
         toolName: "circular",
         error: expect.stringContaining("output could not be serialized"),
       }),
