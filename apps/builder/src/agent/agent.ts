@@ -132,6 +132,10 @@ function buildObservationContent(toolName: string, serializedOutput: string) {
   ].join("\n");
 }
 
+function cloneMessages(messages: AgentMessage[]) {
+  return messages.map((message) => ({ ...message }));
+}
+
 async function appendTrace(
   trace: TraceStep[],
   step: TraceStep,
@@ -151,15 +155,20 @@ export async function runAgent(input: RunAgentInput): Promise<RunAgentResult> {
 
   for (let step = 1; step <= maxSteps; step += 1) {
     let modelOutput: string;
+    const modelInput = cloneMessages(messages);
 
     try {
-      modelOutput = await input.model.complete(messages);
+      modelOutput = await input.model.complete(modelInput);
     } catch (error) {
-      await appendTrace(trace, { step, type: "error", error: errorMessage(error) }, input.onTraceStep);
+      await appendTrace(
+        trace,
+        { step, type: "error", error: errorMessage(error), modelInput },
+        input.onTraceStep,
+      );
       return { answer: "", trace };
     }
 
-    await appendTrace(trace, { step, type: "model", modelOutput }, input.onTraceStep);
+    await appendTrace(trace, { step, type: "model", modelInput, modelOutput }, input.onTraceStep);
 
     let action: ModelAction;
     try {
@@ -167,7 +176,7 @@ export async function runAgent(input: RunAgentInput): Promise<RunAgentResult> {
     } catch (error) {
       await appendTrace(
         trace,
-        { step, type: "error", error: errorMessage(error), modelOutput },
+        { step, type: "error", error: errorMessage(error), modelInput, modelOutput },
         input.onTraceStep,
       );
       return { answer: "", trace };
@@ -186,6 +195,7 @@ export async function runAgent(input: RunAgentInput): Promise<RunAgentResult> {
           step,
           type: "error",
           error: `Unknown tool: ${action.toolName}`,
+          modelInput,
           modelOutput,
           toolName: action.toolName,
           toolInput: action.toolInput,
@@ -203,6 +213,7 @@ export async function runAgent(input: RunAgentInput): Promise<RunAgentResult> {
           step,
           type: "error",
           error: `Invalid input for tool ${tool.name}: ${validation.error.message}`,
+          modelInput,
           modelOutput,
           toolName: tool.name,
           toolInput: action.toolInput,
@@ -222,6 +233,7 @@ export async function runAgent(input: RunAgentInput): Promise<RunAgentResult> {
           step,
           type: "error",
           error: `Tool ${tool.name} failed: ${errorMessage(error)}`,
+          modelInput,
           modelOutput,
           toolName: tool.name,
           toolInput: validation.data,
@@ -239,6 +251,7 @@ export async function runAgent(input: RunAgentInput): Promise<RunAgentResult> {
           step,
           type: "error",
           error: `Tool ${tool.name} output could not be serialized: ${serializedOutput.error}`,
+          modelInput,
           modelOutput,
           toolName: tool.name,
           toolInput: validation.data,

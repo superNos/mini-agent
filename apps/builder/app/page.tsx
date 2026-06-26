@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import type { AgentMessage } from "@/agent/model";
 import type { TraceStep } from "@/agent/trace";
 import {
   Activity,
@@ -172,7 +173,7 @@ function getTraceSummary(trace: TraceStep[] | undefined) {
 
 function stepTitle(step: TraceStep) {
   if (step.type === "tool") return `工具调用 · ${step.toolName}`;
-  if (step.type === "model") return "模型输出";
+  if (step.type === "model") return "模型调用";
   if (step.type === "final") return "最终回答";
   return "运行错误";
 }
@@ -241,6 +242,37 @@ function ModelOutputBlock({ modelOutput }: { modelOutput: string }) {
   if (parsed.ok) return <JsonTreeBlock value={parsed.data} />;
 
   return <RawCodeBlock tone="dark">{modelOutput}</RawCodeBlock>;
+}
+
+function modelRoleClass(role: AgentMessage["role"]) {
+  if (role === "system") return "border-zinc-300 bg-zinc-100 text-zinc-700";
+  if (role === "assistant") return "border-indigo-200 bg-indigo-50 text-indigo-700";
+  return "border-blue-200 bg-blue-50 text-blue-700";
+}
+
+function ModelInputBlock({ messages }: { messages: AgentMessage[] }) {
+  return (
+    <div className="max-h-80 space-y-2 overflow-auto rounded-md border border-zinc-200 bg-zinc-50/70 p-3">
+      {messages.map((message, index) => (
+        <div key={`${message.role}-${index}`} className="rounded-md border border-zinc-200 bg-white p-3">
+          <div className="mb-2 flex items-center justify-between gap-2">
+            <span
+              className={classNames(
+                "inline-flex rounded-md border px-1.5 py-0.5 text-[11px] font-medium",
+                modelRoleClass(message.role),
+              )}
+            >
+              {message.role}
+            </span>
+            <span className="text-[11px] text-zinc-400">message {index + 1}</span>
+          </div>
+          <pre className="max-h-40 overflow-auto whitespace-pre-wrap break-words font-mono text-xs leading-5 text-zinc-700">
+            {message.content}
+          </pre>
+        </div>
+      ))}
+    </div>
+  );
 }
 
 function StatusPill({
@@ -701,7 +733,18 @@ function CreateProjectDialog({
 
 function TraceDetails({ step }: { step: TraceStep }) {
   if (step.type === "model") {
-    return <div className="mt-3"><ModelOutputBlock modelOutput={step.modelOutput} /></div>;
+    return (
+      <div className="mt-3 space-y-3">
+        <div>
+          <p className="mb-1.5 text-xs font-medium text-zinc-500">输入 messages</p>
+          <ModelInputBlock messages={step.modelInput} />
+        </div>
+        <div>
+          <p className="mb-1.5 text-xs font-medium text-zinc-500">输出</p>
+          <ModelOutputBlock modelOutput={step.modelOutput} />
+        </div>
+      </div>
+    );
   }
 
   if (step.type === "tool") {
@@ -734,6 +777,12 @@ function TraceDetails({ step }: { step: TraceStep }) {
         <div>
           <p className="mb-1.5 text-xs font-medium text-red-700">模型输出</p>
           <ModelOutputBlock modelOutput={step.modelOutput} />
+        </div>
+      ) : null}
+      {step.modelInput ? (
+        <div>
+          <p className="mb-1.5 text-xs font-medium text-red-700">模型输入 messages</p>
+          <ModelInputBlock messages={step.modelInput} />
         </div>
       ) : null}
       {step.toolName ? (

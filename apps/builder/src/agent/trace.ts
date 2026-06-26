@@ -1,9 +1,12 @@
+import type { AgentMessage } from "./model";
+
 export type TraceStepType = "model" | "tool" | "final" | "error";
 
 export type TraceStep =
   | {
       step: number;
       type: "model";
+      modelInput: AgentMessage[];
       modelOutput: string;
     }
   | {
@@ -22,6 +25,7 @@ export type TraceStep =
       step: number;
       type: "error";
       error: string;
+      modelInput?: AgentMessage[];
       modelOutput?: string;
       toolName?: string;
       toolInput?: unknown;

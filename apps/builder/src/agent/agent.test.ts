@@ -54,7 +54,14 @@ describe("runAgent", () => {
 
     expect(result.answer).toBe("done");
     expect(result.trace).toEqual([
-      expect.objectContaining({ step: 1, type: "model" }),
+      expect.objectContaining({
+        step: 1,
+        type: "model",
+        modelInput: expect.arrayContaining([
+          expect.objectContaining({ role: "system", content: expect.stringContaining("Return JSON.") }),
+          expect.objectContaining({ role: "user", content: "hello" }),
+        ]),
+      }),
       expect.objectContaining({ step: 1, type: "final", finalAnswer: "done" }),
     ]);
   });
@@ -76,7 +83,29 @@ describe("runAgent", () => {
     expect(result.answer).toBe("abc");
     expect(result.trace).toEqual(
       expect.arrayContaining([
-        expect.objectContaining({ type: "tool", toolName: "echo", toolOutput: { echoed: "abc" } }),
+        expect.objectContaining({
+          type: "model",
+          step: 2,
+          modelInput: expect.arrayContaining([
+            expect.objectContaining({
+              role: "assistant",
+              content: JSON.stringify({
+                type: "tool",
+                toolName: "echo",
+                toolInput: { text: "abc" },
+              }),
+            }),
+            expect.objectContaining({
+              role: "user",
+              content: expect.stringContaining('Observation from tool "echo": {"echoed":"abc"}'),
+            }),
+          ]),
+        }),
+        expect.objectContaining({
+          type: "tool",
+          toolName: "echo",
+          toolOutput: { echoed: "abc" },
+        }),
         expect.objectContaining({ type: "final", finalAnswer: "abc" }),
       ]),
     );
