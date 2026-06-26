@@ -2,8 +2,8 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Generated Mini Agent",
-  description: "A generated mini-agent project",
+  title: "生成的迷你智能体",
+  description: "由 mini-agent-builder 生成的迷你智能体项目",
 };
 
 export default function RootLayout({
@@ -12,7 +12,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html lang="zh-CN">
       <body>{children}</body>
     </html>
   );

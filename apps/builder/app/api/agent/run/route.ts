@@ -10,7 +10,7 @@ export async function POST(request: Request) {
 
   if (!parsed.success) {
     return NextResponse.json(
-      { error: "Invalid request", details: parsed.error.flatten() },
+      { error: "请求参数无效", details: parsed.error.flatten() },
       { status: 400 },
     );
   }

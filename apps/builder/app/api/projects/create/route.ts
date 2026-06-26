@@ -8,6 +8,12 @@ const expectedCreateProjectErrors = new Set([
   "Invalid project path",
 ]);
 
+const createProjectErrorMessages: Record<string, string> = {
+  "Output directory already exists": "输出目录已存在",
+  "Invalid project slug": "项目标识无效",
+  "Invalid project path": "项目路径无效",
+};
+
 function expectedCreateProjectError(error: unknown) {
   if (!(error instanceof Error)) return null;
   if (!expectedCreateProjectErrors.has(error.message)) return null;
@@ -20,7 +26,7 @@ export async function POST(request: Request) {
 
   if (!parsed.success) {
     return NextResponse.json(
-      { error: "Invalid request", details: parsed.error.flatten() },
+      { error: "请求参数无效", details: parsed.error.flatten() },
       { status: 400 },
     );
   }
@@ -31,9 +37,9 @@ export async function POST(request: Request) {
   } catch (error) {
     const expectedError = expectedCreateProjectError(error);
     if (expectedError) {
-      return NextResponse.json({ error: expectedError }, { status: 400 });
+      return NextResponse.json({ error: createProjectErrorMessages[expectedError] }, { status: 400 });
     }
 
-    return NextResponse.json({ error: "Project generation failed" }, { status: 500 });
+    return NextResponse.json({ error: "项目生成失败" }, { status: 500 });
   }
 }

@@ -28,11 +28,11 @@ describe("createProject with real template", () => {
         const result = await createProject({
           workspaceRoot,
           request: {
-            projectName: "Real Template Agent",
+            projectName: "真实模板智能体",
             projectSlug: "real-template-agent",
             baseUrl: "https://api.example.com/v1",
             model: "test-model",
-            systemPrompt: "Return JSON.",
+            systemPrompt: "返回 JSON。",
             selectedTools: ["calculator", "current-time"],
             selectedSkills: [],
           },
@@ -53,7 +53,7 @@ describe("createProject with real template", () => {
         expect(envExample.trimEnd()).toBe("OPENAI_API_KEY=");
 
         const config = await readFile(path.join(result.projectPath, "src", "agent", "config.ts"), "utf8");
-        expect(config).toContain("Real Template Agent");
+        expect(config).toContain("真实模板智能体");
         expect(config).not.toContain("apiKey");
 
         const toolsIndex = await readFile(path.join(result.projectPath, "src", "tools", "index.ts"), "utf8");
@@ -61,13 +61,13 @@ describe("createProject with real template", () => {
         expect(toolsIndex).toContain('import { currentTimeTool } from "./current-time";');
 
         const page = await readFile(path.join(result.projectPath, "app", "page.tsx"), "utf8");
-        expect(page).toContain('aria-label="Agent input"');
+        expect(page).toContain('aria-label="智能体输入"');
 
         const runRoute = await readFile(
           path.join(result.projectPath, "app", "api", "agent", "run", "route.ts"),
           "utf8",
         );
-        expect(runRoute).toContain("Input must be a non-empty string");
+        expect(runRoute).toContain("输入不能为空");
 
         await execFileAsync(
           process.execPath,

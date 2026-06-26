@@ -7,12 +7,12 @@ import { getSelectedTools } from "@/tools";
 export async function POST(request: Request) {
   const apiKey = process.env.OPENAI_API_KEY;
   if (!apiKey) {
-    return NextResponse.json({ error: "Missing OPENAI_API_KEY" }, { status: 400 });
+    return NextResponse.json({ error: "缺少 OPENAI_API_KEY" }, { status: 400 });
   }
 
   const body = (await request.json().catch(() => null)) as { input?: unknown } | null;
   if (typeof body?.input !== "string" || body.input.trim().length === 0) {
-    return NextResponse.json({ error: "Input must be a non-empty string" }, { status: 400 });
+    return NextResponse.json({ error: "输入不能为空" }, { status: 400 });
   }
   const input = body.input.trim();
 

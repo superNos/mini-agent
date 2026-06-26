@@ -12,16 +12,16 @@ export const baseUrlSchema = z
     } catch {
       return false;
     }
-  }, "Use an http or https URL");
+  }, "请使用 http 或 https 地址");
 
-const selectedSkillsSchema = z.array(z.string()).max(0, "No skills are installed yet").default([]);
+const selectedSkillsSchema = z.array(z.string()).max(0, "暂未安装技能").default([]);
 
 export const projectSlugSchema = z
   .string()
-  .min(1, "Project slug is required")
-  .max(64, "Project slug must be 64 characters or less")
-  .regex(/^[a-z0-9][a-z0-9-]*$/, "Use lowercase letters, numbers, and hyphens")
-  .refine((value) => !value.includes(".."), "Path traversal is not allowed");
+  .min(1, "项目标识不能为空")
+  .max(64, "项目标识不能超过 64 个字符")
+  .regex(/^[a-z0-9][a-z0-9-]*$/, "请使用小写字母、数字和连字符")
+  .refine((value) => !value.includes(".."), "不允许路径穿越");
 
 export const modelConfigSchema = z.object({
   baseUrl: baseUrlSchema,
