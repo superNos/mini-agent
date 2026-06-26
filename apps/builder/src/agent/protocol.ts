@@ -27,19 +27,12 @@ function errorMessage(error: unknown) {
 function toolInputExample(toolName: string) {
   if (toolName === "calculator") return '{"expression":"1 + 2"}';
   if (toolName === "current-time") return "{}";
-  if (toolName === "city-distance") return '{"origin":"杭州","destination":"苏州"}';
-  if (toolName === "transport-estimate") {
-    return '{"origin":"杭州","destination":"苏州","travelers":2}';
-  }
   if (toolName === "weather-forecast") return '{"city":"苏州","forecastDays":3}';
-  if (toolName === "attraction-search") {
-    return '{"city":"苏州","radiusMeters":8000,"limit":6,"language":"zh"}';
-  }
-  if (toolName === "hotel-price") {
-    return '{"city":"苏州","nights":1,"travelers":2,"level":"comfort"}';
-  }
   if (toolName === "budget-check") {
     return '{"budget":1500,"items":[{"name":"交通","amount":200},{"name":"住宿","amount":360}],"bufferRate":0.1}';
+  }
+  if (toolName === "itinerary-planner") {
+    return '{"destination":"苏州","days":2,"travelers":2,"interests":["园林","美食"],"weatherSummary":"多云，可能有小雨","budgetStatus":"within-budget"}';
   }
   return "Use a JSON object matching this tool's input schema.";
 }

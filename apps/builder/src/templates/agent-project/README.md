@@ -14,10 +14,9 @@ npm run dev
 
 ```text
 OPENAI_API_KEY=
-OPENTRIPMAP_API_KEY=
 ```
 
-把你的模型密钥填在 `OPENAI_API_KEY` 后面。`OPENTRIPMAP_API_KEY` 只在生成项目包含 `attraction-search` 工具时需要，用于调用 OpenTripMap 免费档景点接口；不配置时该工具会返回配置提示。
+把你的模型密钥填在 `OPENAI_API_KEY` 后面。默认模型接口遵循 OpenAI 兼容对话协议。
 
 项目不依赖高德地图 API。
 

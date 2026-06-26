@@ -1,12 +1,9 @@
 import type { AnyTool } from "@/agent/tool";
 import type { ToolId } from "@/schemas/agent-config";
-import { attractionSearchTool } from "@/tools/attraction-search";
 import { budgetCheckTool } from "@/tools/budget-check";
 import { calculatorTool } from "@/tools/calculator";
-import { cityDistanceTool } from "@/tools/city-distance";
 import { currentTimeTool } from "@/tools/current-time";
-import { hotelPriceTool } from "@/tools/hotel-price";
-import { transportEstimateTool } from "@/tools/transport-estimate";
+import { itineraryPlannerTool } from "@/tools/itinerary-planner";
 import { weatherForecastTool } from "@/tools/weather-forecast";
 import type { Skill } from "@/agent/skill";
 
@@ -19,12 +16,9 @@ export type ToolMetadata = {
 export const toolRegistry: Record<ToolId, AnyTool> = {
   calculator: calculatorTool,
   "current-time": currentTimeTool,
-  "city-distance": cityDistanceTool,
-  "transport-estimate": transportEstimateTool,
   "weather-forecast": weatherForecastTool,
-  "attraction-search": attractionSearchTool,
-  "hotel-price": hotelPriceTool,
   "budget-check": budgetCheckTool,
+  "itinerary-planner": itineraryPlannerTool,
 };
 
 export const toolMetadata: ToolMetadata[] = [
@@ -39,34 +33,19 @@ export const toolMetadata: ToolMetadata[] = [
     description: currentTimeTool.description,
   },
   {
-    id: "city-distance",
-    name: "城市距离",
-    description: cityDistanceTool.description,
-  },
-  {
-    id: "transport-estimate",
-    name: "交通估算",
-    description: transportEstimateTool.description,
-  },
-  {
     id: "weather-forecast",
     name: "天气预报",
     description: weatherForecastTool.description,
   },
   {
-    id: "attraction-search",
-    name: "景点搜索",
-    description: attractionSearchTool.description,
-  },
-  {
-    id: "hotel-price",
-    name: "住宿估算",
-    description: hotelPriceTool.description,
-  },
-  {
     id: "budget-check",
     name: "预算检查",
     description: budgetCheckTool.description,
+  },
+  {
+    id: "itinerary-planner",
+    name: "行程安排",
+    description: itineraryPlannerTool.description,
   },
 ];
 

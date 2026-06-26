@@ -23,21 +23,15 @@ async function createBuilderFixture() {
   await writeFile(path.join(builderRoot, "src", "agent", "agent.test.ts"), "test(\"agent\", () => {});");
   await writeFile(path.join(builderRoot, "src", "tools", "calculator.ts"), "export const calculatorTool = {};");
   await writeFile(path.join(builderRoot, "src", "tools", "current-time.ts"), "export const currentTimeTool = {};");
-  await writeFile(path.join(builderRoot, "src", "tools", "city-distance.ts"), "export const cityDistanceTool = {};");
-  await writeFile(
-    path.join(builderRoot, "src", "tools", "transport-estimate.ts"),
-    "export const transportEstimateTool = {};",
-  );
   await writeFile(
     path.join(builderRoot, "src", "tools", "weather-forecast.ts"),
     "export const weatherForecastTool = {};",
   );
-  await writeFile(
-    path.join(builderRoot, "src", "tools", "attraction-search.ts"),
-    "export const attractionSearchTool = {};",
-  );
-  await writeFile(path.join(builderRoot, "src", "tools", "hotel-price.ts"), "export const hotelPriceTool = {};");
   await writeFile(path.join(builderRoot, "src", "tools", "budget-check.ts"), "export const budgetCheckTool = {};");
+  await writeFile(
+    path.join(builderRoot, "src", "tools", "itinerary-planner.ts"),
+    "export const itineraryPlannerTool = {};",
+  );
   await mkdir(path.join(builderRoot, "src", "skills"), { recursive: true });
   await writeFile(
     path.join(builderRoot, "src", "skills", "arithmetic-check.ts"),
@@ -255,20 +249,14 @@ describe("createProject", () => {
       });
 
       await expect(stat(path.join(result.projectPath, "src", "skills", "travel-planner.ts"))).resolves.toBeTruthy();
-      await expect(stat(path.join(result.projectPath, "src", "tools", "city-distance.ts"))).resolves.toBeTruthy();
-      await expect(stat(path.join(result.projectPath, "src", "tools", "transport-estimate.ts"))).resolves.toBeTruthy();
       await expect(stat(path.join(result.projectPath, "src", "tools", "weather-forecast.ts"))).resolves.toBeTruthy();
-      await expect(stat(path.join(result.projectPath, "src", "tools", "attraction-search.ts"))).resolves.toBeTruthy();
-      await expect(stat(path.join(result.projectPath, "src", "tools", "hotel-price.ts"))).resolves.toBeTruthy();
       await expect(stat(path.join(result.projectPath, "src", "tools", "budget-check.ts"))).resolves.toBeTruthy();
+      await expect(stat(path.join(result.projectPath, "src", "tools", "itinerary-planner.ts"))).resolves.toBeTruthy();
 
       const toolsIndex = await readFile(path.join(result.projectPath, "src", "tools", "index.ts"), "utf8");
-      expect(toolsIndex).toContain('import { cityDistanceTool } from "./city-distance";');
-      expect(toolsIndex).toContain('import { transportEstimateTool } from "./transport-estimate";');
       expect(toolsIndex).toContain('import { weatherForecastTool } from "./weather-forecast";');
-      expect(toolsIndex).toContain('import { attractionSearchTool } from "./attraction-search";');
-      expect(toolsIndex).toContain('import { hotelPriceTool } from "./hotel-price";');
       expect(toolsIndex).toContain('import { budgetCheckTool } from "./budget-check";');
+      expect(toolsIndex).toContain('import { itineraryPlannerTool } from "./itinerary-planner";');
 
       const skillsIndex = await readFile(path.join(result.projectPath, "src", "skills", "index.ts"), "utf8");
       expect(skillsIndex).toContain('import { travelPlannerSkill } from "./travel-planner";');
@@ -276,12 +264,9 @@ describe("createProject", () => {
 
       const config = await readFile(path.join(result.projectPath, "src", "agent", "config.ts"), "utf8");
       expect(config).toContain('"selectedSkillIds": [\n    "travel-planner"\n  ]');
-      expect(config).toContain('"city-distance"');
-      expect(config).toContain('"transport-estimate"');
       expect(config).toContain('"weather-forecast"');
-      expect(config).toContain('"attraction-search"');
-      expect(config).toContain('"hotel-price"');
       expect(config).toContain('"budget-check"');
+      expect(config).toContain('"itinerary-planner"');
     } finally {
       await cleanup();
     }

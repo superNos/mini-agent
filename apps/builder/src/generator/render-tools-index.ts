@@ -3,12 +3,9 @@ import type { ToolId } from "@/schemas/agent-config";
 const exportNames: Record<ToolId, string> = {
   calculator: "calculatorTool",
   "current-time": "currentTimeTool",
-  "city-distance": "cityDistanceTool",
-  "transport-estimate": "transportEstimateTool",
   "weather-forecast": "weatherForecastTool",
-  "attraction-search": "attractionSearchTool",
-  "hotel-price": "hotelPriceTool",
   "budget-check": "budgetCheckTool",
+  "itinerary-planner": "itineraryPlannerTool",
 };
 
 export function renderToolsIndex(selectedTools: ToolId[]) {

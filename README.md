@@ -8,7 +8,7 @@
 
 - OpenAI 兼容模型配置
 - 系统提示词编辑器
-- `calculator`、`current-time`、旅行估算工具和免费接口旅行工具
+- `calculator`、`current-time`、天气查询、预算评估和行程安排工具
 - `arithmetic-check`、`time-awareness` 和 `travel-planner` 内核技能
 - 页面试跑智能体
 - 协议化 Agent Loop
@@ -57,6 +57,7 @@ generated/<project-slug>/
 ## 免费接口旅行工具
 
 - `weather-forecast`：调用 Open-Meteo 免费接口，免 API Key，用于查询目的地天气。
-- `attraction-search`：调用 OpenTripMap 免费档，需要申请 `OPENTRIPMAP_API_KEY`。未配置 Key 时工具会返回配置提示，不会中断 Agent Loop。
+- `budget-check`：根据用户给定的费用项目评估预算是否充足。
+- `itinerary-planner`：根据目的地、天数、天气摘要和预算状态生成结构化每日安排。
 
-项目不接入高德地图 API。路线、交通和住宿仍保留本地估算工具，避免学习内核依赖商业地图服务。
+项目不接入高德地图 API，也不内置机票、火车票、酒店或景点实时查询。旅行示例只保留适合教学的工具编排。

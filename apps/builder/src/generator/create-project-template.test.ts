@@ -45,18 +45,14 @@ describe("createProject with real template", () => {
         await expectPathExists(path.join(result.projectPath, "src", "agent", "agent.ts"));
         await expectPathExists(path.join(result.projectPath, "src", "agent", "config.ts"));
         await expectPathExists(path.join(result.projectPath, "src", "tools", "current-time.ts"));
-        await expectPathExists(path.join(result.projectPath, "src", "tools", "city-distance.ts"));
-        await expectPathExists(path.join(result.projectPath, "src", "tools", "transport-estimate.ts"));
         await expectPathExists(path.join(result.projectPath, "src", "tools", "weather-forecast.ts"));
-        await expectPathExists(path.join(result.projectPath, "src", "tools", "attraction-search.ts"));
-        await expectPathExists(path.join(result.projectPath, "src", "tools", "hotel-price.ts"));
         await expectPathExists(path.join(result.projectPath, "src", "tools", "budget-check.ts"));
+        await expectPathExists(path.join(result.projectPath, "src", "tools", "itinerary-planner.ts"));
         await expectPathExists(path.join(result.projectPath, "src", "tools", "index.ts"));
         await expectPathExists(path.join(result.projectPath, "src", "skills", "travel-planner.ts"));
 
         const envExample = await readFile(path.join(result.projectPath, ".env.example"), "utf8");
-        expect(envExample).toContain("OPENAI_API_KEY=");
-        expect(envExample).toContain("OPENTRIPMAP_API_KEY=");
+        expect(envExample.trimEnd()).toBe("OPENAI_API_KEY=");
 
         const config = await readFile(path.join(result.projectPath, "src", "agent", "config.ts"), "utf8");
         expect(config).toContain("真实模板智能体");
@@ -64,10 +60,9 @@ describe("createProject with real template", () => {
 
         const toolsIndex = await readFile(path.join(result.projectPath, "src", "tools", "index.ts"), "utf8");
         expect(toolsIndex).toContain('import { currentTimeTool } from "./current-time";');
-        expect(toolsIndex).toContain('import { cityDistanceTool } from "./city-distance";');
-        expect(toolsIndex).toContain('import { transportEstimateTool } from "./transport-estimate";');
         expect(toolsIndex).toContain('import { weatherForecastTool } from "./weather-forecast";');
-        expect(toolsIndex).toContain('import { attractionSearchTool } from "./attraction-search";');
+        expect(toolsIndex).toContain('import { budgetCheckTool } from "./budget-check";');
+        expect(toolsIndex).toContain('import { itineraryPlannerTool } from "./itinerary-planner";');
 
         const skillsIndex = await readFile(path.join(result.projectPath, "src", "skills", "index.ts"), "utf8");
         expect(skillsIndex).toContain('import { travelPlannerSkill } from "./travel-planner";');
