@@ -786,10 +786,170 @@ function AnswerPanel({ runResult, runError }: { runResult: RunResult | null; run
     );
   }
 
+  const answer = (runResult?.answer ?? "").trim();
+  if (!answer) {
+    return (
+      <div className="min-h-52 rounded-md border border-dashed border-zinc-300 bg-zinc-50 p-4 text-sm leading-6 text-zinc-500">
+        运行 Agent 后会在这里显示最终回答。
+      </div>
+    );
+  }
+
+  const parsedJson = parseJson(answer);
+  if (parsedJson.ok && isJsonContainer(parsedJson.data)) {
+    return (
+      <div className="min-h-52 overflow-auto rounded-md border border-zinc-200 bg-zinc-50 p-4">
+        <JsonTreeBlock value={parsedJson.data} />
+      </div>
+    );
+  }
+
+  return <MarkdownAnswer content={answer} />;
+}
+
+type MarkdownBlock =
+  | { type: "heading"; level: number; content: string }
+  | { type: "paragraph"; content: string }
+  | { type: "unordered-list"; items: string[] }
+  | { type: "ordered-list"; items: string[] }
+  | { type: "code"; content: string };
+
+function isMarkdownBoundary(line: string) {
+  const trimmed = line.trim();
   return (
-    <pre className="min-h-52 overflow-auto whitespace-pre-wrap rounded-md border border-zinc-200 bg-zinc-50 p-4 text-sm leading-6 text-zinc-800">
-      {runResult?.answer || "运行 Agent 后会在这里显示最终回答。"}
-    </pre>
+    !trimmed ||
+    trimmed.startsWith("```") ||
+    /^#{1,4}\s+/.test(trimmed) ||
+    /^[-*]\s+/.test(trimmed) ||
+    /^\d+\.\s+/.test(trimmed)
+  );
+}
+
+function parseMarkdownBlocks(markdown: string) {
+  const lines = markdown.replace(/\r\n/g, "\n").split("\n");
+  const blocks: MarkdownBlock[] = [];
+  let index = 0;
+
+  while (index < lines.length) {
+    const line = lines[index];
+    const trimmed = line.trim();
+    if (!trimmed) {
+      index += 1;
+      continue;
+    }
+
+    if (trimmed.startsWith("```")) {
+      index += 1;
+      const codeLines: string[] = [];
+      while (index < lines.length && !lines[index].trim().startsWith("```")) {
+        codeLines.push(lines[index]);
+        index += 1;
+      }
+      if (index < lines.length) index += 1;
+      blocks.push({ type: "code", content: codeLines.join("\n") });
+      continue;
+    }
+
+    const heading = /^(#{1,4})\s+(.+)$/.exec(trimmed);
+    if (heading) {
+      blocks.push({ type: "heading", level: heading[1].length, content: heading[2] });
+      index += 1;
+      continue;
+    }
+
+    if (/^[-*]\s+/.test(trimmed)) {
+      const items: string[] = [];
+      while (index < lines.length && /^[-*]\s+/.test(lines[index].trim())) {
+        items.push(lines[index].trim().replace(/^[-*]\s+/, ""));
+        index += 1;
+      }
+      blocks.push({ type: "unordered-list", items });
+      continue;
+    }
+
+    if (/^\d+\.\s+/.test(trimmed)) {
+      const items: string[] = [];
+      while (index < lines.length && /^\d+\.\s+/.test(lines[index].trim())) {
+        items.push(lines[index].trim().replace(/^\d+\.\s+/, ""));
+        index += 1;
+      }
+      blocks.push({ type: "ordered-list", items });
+      continue;
+    }
+
+    const paragraphLines: string[] = [];
+    while (index < lines.length && !isMarkdownBoundary(lines[index])) {
+      paragraphLines.push(lines[index].trim());
+      index += 1;
+    }
+    blocks.push({ type: "paragraph", content: paragraphLines.join(" ") });
+  }
+
+  return blocks;
+}
+
+function renderInlineMarkdown(content: string) {
+  const parts = content.split(/(`[^`]+`|\*\*[^*]+\*\*)/g).filter(Boolean);
+  return parts.map((part, index) => {
+    if (part.startsWith("**") && part.endsWith("**")) {
+      return (
+        <strong key={`${part}-${index}`} className="font-semibold text-zinc-950">
+          {part.slice(2, -2)}
+        </strong>
+      );
+    }
+    if (part.startsWith("`") && part.endsWith("`")) {
+      return (
+        <code key={`${part}-${index}`} className="rounded bg-zinc-100 px-1 py-0.5 font-mono text-[0.9em] text-zinc-800">
+          {part.slice(1, -1)}
+        </code>
+      );
+    }
+    return <span key={`${part}-${index}`}>{part}</span>;
+  });
+}
+
+function MarkdownAnswer({ content }: { content: string }) {
+  const blocks = parseMarkdownBlocks(content);
+  return (
+    <article className="min-h-52 space-y-4 overflow-auto rounded-md border border-zinc-200 bg-zinc-50 p-4 text-sm leading-7 text-zinc-800">
+      {blocks.map((block, index) => {
+        if (block.type === "heading") {
+          const HeadingTag = `h${Math.min(block.level + 1, 4)}` as "h2" | "h3" | "h4";
+          return (
+            <HeadingTag key={index} className="pt-1 text-base font-semibold leading-7 text-zinc-950 first:pt-0">
+              {renderInlineMarkdown(block.content)}
+            </HeadingTag>
+          );
+        }
+        if (block.type === "unordered-list") {
+          return (
+            <ul key={index} className="list-disc space-y-1 pl-5">
+              {block.items.map((item, itemIndex) => (
+                <li key={itemIndex}>{renderInlineMarkdown(item)}</li>
+              ))}
+            </ul>
+          );
+        }
+        if (block.type === "ordered-list") {
+          return (
+            <ol key={index} className="list-decimal space-y-1 pl-5">
+              {block.items.map((item, itemIndex) => (
+                <li key={itemIndex}>{renderInlineMarkdown(item)}</li>
+              ))}
+            </ol>
+          );
+        }
+        if (block.type === "code") {
+          return (
+            <pre key={index} className="overflow-auto rounded-md border border-zinc-200 bg-white p-3 font-mono text-xs leading-5 text-zinc-800">
+              {block.content}
+            </pre>
+          );
+        }
+        return <p key={index}>{renderInlineMarkdown(block.content)}</p>;
+      })}
+    </article>
   );
 }
 
@@ -1126,8 +1286,8 @@ function groupStepLabel(group: TraceCardGroup) {
   return `第 ${group.step} 步`;
 }
 
-function TraceCard({ group, defaultOpen }: { group: TraceCardGroup; defaultOpen: boolean }) {
-  const [isOpen, setIsOpen] = useState(defaultOpen);
+function TraceCard({ group }: { group: TraceCardGroup }) {
+  const [isOpen, setIsOpen] = useState(false);
   const isError = group.type === "error";
   const Icon =
     group.type === "tool"
@@ -1267,12 +1427,8 @@ function TraceSidebar({
 
         {filteredTrace.length ? (
           <div className="space-y-4">
-            {filteredTrace.map((group, index) => (
-              <TraceCard
-                key={group.key}
-                group={group}
-                defaultOpen={group.type === "error" || index === filteredTrace.length - 1}
-              />
+            {filteredTrace.map((group) => (
+              <TraceCard key={group.key} group={group} />
             ))}
           </div>
         ) : trace?.length ? (
