@@ -1281,14 +1281,19 @@ function groupPhaseLabel(group: TraceCardGroup) {
   return group.primary.phase;
 }
 
-function groupStepLabel(group: TraceCardGroup) {
-  if (group.type === "skill") return "准备阶段";
-  return `第 ${group.step} 步`;
+function groupStepLabel(nodeIndex: number) {
+  return `第 ${nodeIndex} 步`;
 }
 
-function TraceCard({ group }: { group: TraceCardGroup }) {
+function groupLoopLabel(group: TraceCardGroup) {
+  if (group.type === "skill") return "";
+  return `第 ${group.step} 轮`;
+}
+
+function TraceCard({ group, nodeIndex }: { group: TraceCardGroup; nodeIndex: number }) {
   const [isOpen, setIsOpen] = useState(false);
   const isError = group.type === "error";
+  const loopLabel = groupLoopLabel(group);
   const Icon =
     group.type === "tool"
       ? Wrench
@@ -1318,7 +1323,12 @@ function TraceCard({ group }: { group: TraceCardGroup }) {
         >
           <span className="min-w-0">
             <span className="mb-1 flex flex-wrap items-center gap-2">
-              <span className="text-xs font-medium text-zinc-500">{groupStepLabel(group)}</span>
+              <span className="text-xs font-medium text-zinc-500">{groupStepLabel(nodeIndex)}</span>
+              {loopLabel ? (
+                <span className="rounded-md border border-zinc-200 bg-zinc-50 px-1.5 py-0.5 text-[11px] font-medium text-zinc-500">
+                  {loopLabel}
+                </span>
+              ) : null}
               <span className={classNames("rounded-md border px-1.5 py-0.5 text-[11px] font-medium", stepBadgeClass(group.type))}>
                 {group.type}
               </span>
@@ -1352,9 +1362,12 @@ function TraceSidebar({
   const [activeFilter, setActiveFilter] = useState<TraceFilter>("all");
   const summary = getTraceSummary(trace);
   const hasError = summary.error > 0;
-  const traceGroups = groupTraceSteps(trace ?? []);
+  const traceGroups = groupTraceSteps(trace ?? []).map((group, index) => ({
+    group,
+    nodeIndex: index + 1,
+  }));
   const filteredTrace =
-    activeFilter === "all" ? traceGroups : traceGroups.filter((group) => group.type === activeFilter);
+    activeFilter === "all" ? traceGroups : traceGroups.filter((item) => item.group.type === activeFilter);
 
   if (isCollapsed) {
     return (
@@ -1427,8 +1440,8 @@ function TraceSidebar({
 
         {filteredTrace.length ? (
           <div className="space-y-4">
-            {filteredTrace.map((group) => (
-              <TraceCard key={group.key} group={group} />
+            {filteredTrace.map(({ group, nodeIndex }) => (
+              <TraceCard key={group.key} group={group} nodeIndex={nodeIndex} />
             ))}
           </div>
         ) : trace?.length ? (
