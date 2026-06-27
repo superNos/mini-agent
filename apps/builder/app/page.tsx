@@ -1229,12 +1229,6 @@ function TraceGroupDetails({ group }: { group: TraceCardGroup }) {
             <ModelOutputBlock modelOutput={completed.modelOutput} />
           </div>
         ) : null}
-        {group.action ? (
-          <div>
-            <p className="mb-1.5 text-xs font-medium text-zinc-500">协议解析（内部）</p>
-            <JsonTreeBlock value={group.action.action} />
-          </div>
-        ) : null}
       </div>
     );
   }
