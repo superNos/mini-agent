@@ -26,8 +26,45 @@ describe("agent protocol", () => {
     });
   });
 
+  it("parses json wrapped in markdown fences", () => {
+    expect(
+      parseModelAction('```json\n{"type":"final","answer":"done"}\n```'),
+    ).toEqual({
+      type: "final",
+      answer: "done",
+    });
+  });
+
+  it("recovers malformed final json when the answer is natural language", () => {
+    expect(
+      parseModelAction(`{
+  "type": "final",
+  "answer": "## 苏州 2 天 1 晚旅行计划
+
+- 第一天：逛博物馆。
+- 第二天：轻松返程。"
+}`),
+    ).toEqual({
+      type: "final",
+      answer: "## 苏州 2 天 1 晚旅行计划\n\n- 第一天：逛博物馆。\n- 第二天：轻松返程。",
+    });
+  });
+
+  it("accepts plain markdown as a final answer", () => {
+    expect(parseModelAction("## 旅行计划\n\n- 上午出发\n- 下午游览")).toEqual({
+      type: "final",
+      answer: "## 旅行计划\n\n- 上午出发\n- 下午游览",
+    });
+  });
+
   it("rejects invalid JSON", () => {
     expect(() => parseModelAction("not json")).toThrow("Invalid JSON");
+  });
+
+  it("still rejects malformed tool actions", () => {
+    expect(() =>
+      parseModelAction('{"type":"tool","toolName":"calculator","toolInput":'),
+    ).toThrow("Invalid JSON");
   });
 
   it("builds the protocol prompt with available tools", () => {
@@ -44,6 +81,7 @@ describe("agent protocol", () => {
 
     expect(prompt).toContain("Base prompt");
     expect(prompt).toContain('To use a tool, return {"type":"tool"');
+    expect(prompt).toContain("escape line breaks as \\n");
     expect(prompt).toContain("- demo: Demo tool.");
   });
 
